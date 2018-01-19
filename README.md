@@ -2,7 +2,7 @@
 
 A bounding box tool using OpenCV 3.
 
-Easily generate the training data in the correct format for YOLOv2.
+Easily generate the training data in the format YOLOv2 requires.
 
 ## Instruction
 
