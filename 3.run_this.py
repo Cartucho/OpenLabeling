@@ -64,7 +64,7 @@ last_class_index = len(class_list) - 1
 class_rgb = np.random.random_integers(low=0, high=255, size=(3,len(class_list)))
 
 # create window
-WINDOW_NAME = 'fastbbox'
+WINDOW_NAME = 'openbbox'
 cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_KEEPRATIO)
 cv2.resizeWindow(WINDOW_NAME, 1000, 600)
 
@@ -80,8 +80,8 @@ cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, change_clas
 change_img_index(0)
 edges_on = False
 
-cv2.displayOverlay(WINDOW_NAME, "Welcome to fastbbox!\n Press [h] for help.", 4000)
-print(" Welcome to fastbbox!\n Select the window and press [h] for help.")
+cv2.displayOverlay(WINDOW_NAME, "Welcome to openbbox!\n Press [h] for help.", 4000)
+print(" Welcome to openbbox!\n Select the window and press [h] for help.")
 
 # loop
 while True:
