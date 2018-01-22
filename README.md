@@ -18,7 +18,7 @@ Bounding box labeler tool to generate the training data in the format YOLO v2 re
 
 ## Quick start
 
-To start using the YOLO Bounding Box Tool you need to [download the latest release](https://github.com/Cartucho/yolo-boundingbox-labeler-GUI/archive/v1.1.zip) or clone the repo:
+To start using the YOLO Bounding Box Tool you need to [download the latest release](https://github.com/Cartucho/yolo-boundingbox-labeler-GUI/archive/v1.0.zip) or clone the repo:
 
 ```
 git clone https://github.com/Cartucho/yolo-boundingbox-labeler-GUI
