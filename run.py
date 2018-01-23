@@ -183,7 +183,7 @@ with open('class_list.txt') as f:
 last_class_index = len(class_list) - 1
 
 # random rgb for each class
-class_rgb = np.random.random_integers(low=0, high=255, size=(3,len(class_list)))
+class_rgb = np.random.random_integers(low=0, high=255, size=(len(class_list),3))
 
 # create window
 WINDOW_NAME = 'Bounding Box Labeler'
@@ -213,12 +213,12 @@ if not os.path.exists(bb_dir):
 while True:
     # clone the img
     tmp_img = img.copy()
-    width, height = tmp_img.shape[:2]
+    height, width = tmp_img.shape[:2]
     if edges_on == True:
         # draw edges
         tmp_img = draw_edges(tmp_img)
     # draw vertical and horizong yellow guide lines
-    draw_line(tmp_img, mouse_x, mouse_y, width, height)
+    draw_line(tmp_img, mouse_x, mouse_y, height, width)
     img_path = image_list[img_index]
     txt_path = get_txt_path(img_path)
     # draw already done bounding boxes
@@ -300,3 +300,4 @@ while True:
         break
 
 cv2.destroyAllWindows()
+
