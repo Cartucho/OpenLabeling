@@ -8,6 +8,10 @@ Bounding box labeler tool to generate the training data in the format YOLO v2 re
 <img src="https://media.giphy.com/media/l49JDgDSygJN369vW/giphy.gif" width="40%"><img src="https://media.giphy.com/media/3ohc1csRs9PoDgCeuk/giphy.gif" width="40%">
 <img src="https://media.giphy.com/media/3o752fXKwTJJkhXP32/giphy.gif" width="40%"><img src="https://media.giphy.com/media/3ohc11t9auzSo6fwLS/giphy.gif" width="40%">
 
+The idea is to use OpenCV so that later it uses SIFT and Tracking algorithms to make labeling easier.
+
+I wanted this tool to give automatic suggestions for the labels!
+
 ## Table of contents
 
 - [Quick start](#quick-start)
