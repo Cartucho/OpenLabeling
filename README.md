@@ -11,6 +11,7 @@ Bounding box labeler tool to generate the training data in the format YOLO v2 re
 The idea is to use OpenCV so that later it uses SIFT and Tracking algorithms to make labeling easier.
 
 I wanted this tool to give automatic suggestions for the labels!
+[New Features Discussion](https://github.com/Cartucho/yolo-boundingbox-labeler-GUI/issues/3)
 
 ## Table of contents
 
