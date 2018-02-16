@@ -188,20 +188,21 @@ def mouse_listener(event, x, y, flags, param):
         mouse_y = y
     elif event == cv2.EVENT_LBUTTONDBLCLK:
         prev_was_double_click = True
-        print("Double click")
+        #print("Double click")
         point_1 = (-1, -1)
         # if clicked inside a bounding box
         set_selected_bbox()
     elif event == cv2.EVENT_LBUTTONDOWN:
         if prev_was_double_click:
-            print("Finish double click")
+            #print("Finish double click")
             prev_was_double_click = False
         else:
-            print("Normal left click")
+            #print("Normal left click")
+            is_mouse_inside_delete_button = mouse_inside_delete_button()
             if point_1[0] is -1:
                 if is_bbox_selected and is_mouse_inside_delete_button:
                     # the user wants to delete the bbox
-                    print("Delete bbox")
+                    #print("Delete bbox")
                     delete_selected_bbox()
                 else:
                     is_bbox_selected = False
