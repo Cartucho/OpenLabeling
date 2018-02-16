@@ -117,7 +117,7 @@ def draw_bboxes_from_file(tmp_img, txt_path, width, height):
             # convert yolo to points
             x1, y1, x2, y2 = yolo_to_x_y(x_center, y_center, x_width, y_height, width, height)
             img_objects.append([class_index, x1, y1, x2, y2])
-            color = class_rgb[class_index]
+            color = class_rgb[class_index].tolist()
             cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, 2)
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(tmp_img, class_list[class_index], (x1, y1 - 5), font, 0.6, color, 2, cv2.LINE_AA)
@@ -240,7 +240,7 @@ while True:
                 break
 
         if not removed_an_object:
-            color = class_rgb[class_index]
+            color = class_rgb[class_index].tolist()
             # draw partial bbox
             cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, 2)
             # if second click
