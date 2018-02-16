@@ -10,6 +10,11 @@ img = None
 img_objects = []
 bb_dir = "bbox_txt/"
 
+# selected bounding box
+prev_was_double_click = False
+is_bbox_selected = False
+selected_bbox = -1
+
 mouse_x = 0
 mouse_y = 0
 point_1 = (-1, -1)
@@ -95,6 +100,7 @@ def delete_bb(txt_path, line_index):
                 new_file.write(line)
             counter += 1
 
+
 def yolo_to_x_y(x_center, y_center, x_width, y_height, width, height):
     x_center *= width
     y_center *= height
@@ -103,6 +109,12 @@ def yolo_to_x_y(x_center, y_center, x_width, y_height, width, height):
     x_width /= 2.0
     y_height /= 2.0
     return int(x_center - x_width), int(y_center - y_height), int(x_center + x_width), int(y_center + y_height)
+
+
+def draw_text(tmp_img, text, center, color):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.putText(tmp_img, text, center, font, 0.6, color, 2, cv2.LINE_AA)
+    return tmp_img
 
 def draw_bboxes_from_file(tmp_img, txt_path, width, height):
     global img_objects
@@ -119,23 +131,88 @@ def draw_bboxes_from_file(tmp_img, txt_path, width, height):
             img_objects.append([class_index, x1, y1, x2, y2])
             color = class_rgb[class_index].tolist()
             cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, 2)
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(tmp_img, class_list[class_index], (x1, y1 - 5), font, 0.6, color, 2, cv2.LINE_AA)
+            tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color)
     return tmp_img
 
+
+def get_bbox_area(x1, y1, x2, y2):
+    width = abs(x2 - x1)
+    height = abs(y2 - y1)
+    return width*height
+
+
+def set_selected_bbox():
+    global is_bbox_selected, selected_bbox
+    smallest_area = -1
+    # if clicked inside multiple bboxes selects the smallest one
+    for idx, obj in enumerate(img_objects):
+        ind, x1, y1, x2, y2 = obj
+        if is_mouse_inside_points(x1, y1, x2, y2):
+            is_bbox_selected = True
+            tmp_area = get_bbox_area(x1, y1, x2, y2)
+            if tmp_area < smallest_area or smallest_area == -1:
+                smallest_area = tmp_area
+                selected_bbox = idx
+
+
+def mouse_inside_delete_button():
+    for idx, obj in enumerate(img_objects):
+        if idx == selected_bbox:
+            ind, x1, y1, x2, y2 = obj
+            x1_c, y1_c, x2_c, y2_c = get_close_icon(x1, y1, x2, y2)
+            if is_mouse_inside_points(x1_c, y1_c, x2_c, y2_c):
+                return True
+    return False
+
+def delete_selected_bbox():
+    img_path = image_list[img_index]
+    txt_path = get_txt_path(img_path)
+    is_bbox_selected = False
+
+    with open(txt_path, "r") as old_file:
+        lines = old_file.readlines()
+
+    with open(txt_path, "w") as new_file:
+        counter = 0
+        for line in lines:
+            if counter is not selected_bbox:
+                new_file.write(line)
+            counter += 1
+
 # mouse callback function
-def draw_roi(event, x, y, flags, param):
-    global mouse_x, mouse_y, point_1, point_2
+def mouse_listener(event, x, y, flags, param):
+    global is_bbox_selected, prev_was_double_click, mouse_x, mouse_y, point_1, point_2
+
     if event == cv2.EVENT_MOUSEMOVE:
         mouse_x = x
         mouse_y = y
+    elif event == cv2.EVENT_LBUTTONDBLCLK:
+        prev_was_double_click = True
+        print("Double click")
+        point_1 = (-1, -1)
+        # if clicked inside a bounding box
+        set_selected_bbox()
     elif event == cv2.EVENT_LBUTTONDOWN:
-        if point_1[0] is -1:
-            # first click (start drawing a bounding box or delete an item)
-            point_1 = (x, y)
+        if prev_was_double_click:
+            print("Finish double click")
+            prev_was_double_click = False
         else:
-            # second click
-            point_2 = (x, y)
+            print("Normal left click")
+            if point_1[0] is -1:
+                if is_bbox_selected and is_mouse_inside_delete_button:
+                    # the user wants to delete the bbox
+                    print("Delete bbox")
+                    delete_selected_bbox()
+                else:
+                    is_bbox_selected = False
+                    # first click (start drawing a bounding box or delete an item)
+                    point_1 = (x, y)
+            else:
+                # minimal size for bounding box to avoid errors
+                threshold = 20
+                if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
+                    # second click
+                    point_2 = (x, y)
 
 
 def is_mouse_inside_points(x1, y1, x2, y2):
@@ -143,7 +220,7 @@ def is_mouse_inside_points(x1, y1, x2, y2):
 
 
 def get_close_icon(x1, y1, x2, y2):
-    percentage = 0.1
+    percentage = 0.05
     height = -1
     while height < 15 and percentage < 1.0:
         height = int((y2 - y1) * percentage)
@@ -160,12 +237,12 @@ def draw_close_icon(tmp_img, x1_c, y1_c, x2_c, y2_c):
     return tmp_img
 
 
-def draw_info_if_bb_selected(tmp_img):
-    for obj in img_objects:
+def draw_info_bb_selected(tmp_img):
+    for idx, obj in enumerate(img_objects):
         ind, x1, y1, x2, y2 = obj
-        if is_mouse_inside_points(x1, y1, x2, y2):
+        if idx == selected_bbox:
             x1_c, y1_c, x2_c, y2_c = get_close_icon(x1, y1, x2, y2)
-            tmp_img = draw_close_icon(tmp_img, x1_c, y1_c, x2_c, y2_c)
+            draw_close_icon(tmp_img, x1_c, y1_c, x2_c, y2_c)
     return tmp_img
 
 
@@ -189,7 +266,7 @@ class_rgb = np.random.random_integers(low=0, high=255, size=(len(class_list),3))
 WINDOW_NAME = 'Bounding Box Labeler'
 cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_KEEPRATIO)
 cv2.resizeWindow(WINDOW_NAME, 1000, 700)
-cv2.setMouseCallback(WINDOW_NAME, draw_roi)
+cv2.setMouseCallback(WINDOW_NAME, mouse_listener)
 
 # selected image
 TRACKBAR_IMG = 'Image'
@@ -224,39 +301,27 @@ while True:
     # draw already done bounding boxes
     tmp_img = draw_bboxes_from_file(tmp_img, txt_path, width, height)
     # if bounding box is selected add extra info
-    tmp_img = draw_info_if_bb_selected(tmp_img)
+    if is_bbox_selected:
+        tmp_img = draw_info_bb_selected(tmp_img)
     # if first click
     if point_1[0] is not -1:
-        removed_an_object = False
-        # if clicked inside a delete button, then remove that object
-        for obj in img_objects:
-            ind, x1, y1, x2, y2 = obj
-            x1, y1, x2, y2 = get_close_icon(x1, y1, x2, y2)
-            if is_mouse_inside_points(x1, y1, x2, y2):
-                # remove that object
-                delete_bb(txt_path, img_objects.index(obj))
-                removed_an_object = True
-                point_1 = (-1, -1)
-                break
-
-        if not removed_an_object:
-            color = class_rgb[class_index].tolist()
-            # draw partial bbox
-            cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, 2)
-            # if second click
-            if point_2[0] is not -1:
-                # save the bounding box
-                line = yolo_format(class_index, point_1, point_2, width, height)
-                save_bb(txt_path, line)
-                # reset the points
-                point_1 = (-1, -1)
-                point_2 = (-1, -1)
-            else:
-                cv2.displayOverlay(WINDOW_NAME, "Selected label: " + class_list[class_index] + ""
-                                        "\nPress [w] or [s] to change.", 120)
+        color = class_rgb[class_index].tolist()
+        # draw partial bbox
+        cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, 2)
+        # if second click
+        if point_2[0] is not -1:
+            # save the bounding box
+            line = yolo_format(class_index, point_1, point_2, width, height)
+            save_bb(txt_path, line)
+            # reset the points
+            point_1 = (-1, -1)
+            point_2 = (-1, -1)
+        else:
+            cv2.displayOverlay(WINDOW_NAME, "Selected label: " + class_list[class_index] + ""
+                                    "\nPress [w] or [s] to change.", 120)
 
     cv2.imshow(WINDOW_NAME, tmp_img)
-    pressed_key = cv2.waitKey(100)
+    pressed_key = cv2.waitKey(50)
 
     """ Key Listeners START """
     if pressed_key == ord('a') or pressed_key == ord('d'):
@@ -300,4 +365,3 @@ while True:
         break
 
 cv2.destroyAllWindows()
-
