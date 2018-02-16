@@ -7,7 +7,7 @@ import cv2
 
 
 parser = argparse.ArgumentParser(description='YOLO v2 Bounding Box Tool')
-parser.add_argument('format', default='yolo', type=str, help="Bounding box format. Default YOLO. Options: ['yolo', 'voc']")
+parser.add_argument('--format', default='yolo', type=str, help="Bounding box format. Default YOLO. Options: ['yolo', 'voc']")
 args = parser.parse_args()
 
 class_index = 0
