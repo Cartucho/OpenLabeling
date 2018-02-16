@@ -83,8 +83,10 @@ def yolo_format(class_index, point_1, point_2, height, width):
 
 def voc_format(class_index, point_1, point_2):
     # Order: xmin ymin xmax ymax class
-    items = list(point_1) + list(point_2) + [class_index]
-    items = map(str, items)
+    # Top left pixel is (1, 1) in VOC
+    xmin, ymin = point_1[0] + 1, point_1[1] + 1
+    xmax, ymax = point_2[0] + 1, point_2[1] + 1
+    items = map(str, [xmin, ymin, xmax, ymax, class_index])
     return ' '.join(items)
 
 
@@ -136,6 +138,7 @@ def draw_bboxes_from_file(tmp_img, txt_path, width, height):
                 x1, y1, x2, y2 = yolo_to_x_y(x_center, y_center, x_width, y_height, width, height)
             elif args.format == 'voc':
                 x1, y1, x2, y2, class_index = map(int, values_str)
+                x1, y1, x2, y2 = x1-1, y1-1, x2-1, y2-1
             else:
                 raise Exception("Unknown bounding box format.")
             img_objects.append([class_index, x1, y1, x2, y2])
