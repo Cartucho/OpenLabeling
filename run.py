@@ -284,10 +284,9 @@ img_dir = "images/"
 image_list = glob.glob(img_dir +'*.jpg')
 image_list.extend(glob.glob(img_dir + '*.jpeg'))
 #print(image_list)
-if args.sort:
-    image_list.sort()
-else:
-    np.random.seed(123)
+image_list.sort()
+else not args.sort:
+    np.random.seed(123)  # Keep random img order consistent
     np.random.shuffle(image_list)
 last_img_index = len(image_list) - 1
 
