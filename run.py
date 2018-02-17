@@ -1,8 +1,14 @@
+import argparse
+import textwrap
 import glob
 import os
 
 import numpy as np
 import cv2
+
+parser = argparse.ArgumentParser(description='YOLO v2 Bounding Box Tool')
+parser.add_argument('--format', default='yolo', type=str, choices=['yolo', 'voc'], help="Bounding box format")
+args = parser.parse_args()
 
 class_index = 0
 img_index = 0
@@ -70,12 +76,22 @@ def draw_line(img, x, y, height, width):
 
 def yolo_format(class_index, point_1, point_2, height, width):
     # YOLO wants everything normalized
+    # Order: class x_center y_center x_width y_height
     x_center = (point_1[0] + point_2[0]) / float(2.0 * height)
     y_center = (point_1[1] + point_2[1]) / float(2.0 * width)
     x_width = float(abs(point_2[0] - point_1[0])) / height
     y_height = float(abs(point_2[1] - point_1[1])) / width
     return str(class_index) + " " + str(x_center) \
        + " " + str(y_center) + " " + str(x_width) + " " + str(y_height)
+
+
+def voc_format(class_index, point_1, point_2):
+    # Order: xmin ymin xmax ymax class
+    # Top left pixel is (1, 1) in VOC
+    xmin, ymin = point_1[0] + 1, point_1[1] + 1
+    xmax, ymax = point_2[0] + 1, point_2[1] + 1
+    items = map(str, [xmin, ymin, xmax, ymax, class_index])
+    return ' '.join(items)
 
 
 def get_txt_path(img_path):
@@ -124,10 +140,25 @@ def draw_bboxes_from_file(tmp_img, txt_path, width, height):
             content = f.readlines()
         for line in content:
             values_str = line.split()
-            class_index, x_center, y_center, x_width, y_height = map(float, values_str)
-            class_index = int(class_index)
-            # convert yolo to points
-            x1, y1, x2, y2 = yolo_to_x_y(x_center, y_center, x_width, y_height, width, height)
+            if args.format == 'yolo':
+                class_index, x_center, y_center, x_width, y_height = map(float, values_str)
+                class_index = int(class_index)
+                # convert yolo to points
+                x1, y1, x2, y2 = yolo_to_x_y(x_center, y_center, x_width, y_height, width, height)
+                if x_center == int(x_center):
+                    error = ("You selected the 'yolo' format but your labels "
+                             "seem to be in a different format. Consider "
+                             "removing your old label files.")
+                    raise Exception(textwrap.fill(error, 70))
+            elif args.format == 'voc':
+                try:
+                    x1, y1, x2, y2, class_index = map(int, values_str)
+                except ValueError:
+                    error = ("You selected the 'voc' format but your labels "
+                             "seem to be in a different format. Consider "
+                             "removing your old label files.")
+                    raise Exception(textwrap.fill(error, 70))
+                x1, y1, x2, y2 = x1-1, y1-1, x2-1, y2-1
             img_objects.append([class_index, x1, y1, x2, y2])
             color = class_rgb[class_index].tolist()
             cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, 2)
@@ -312,7 +343,10 @@ while True:
         # if second click
         if point_2[0] is not -1:
             # save the bounding box
-            line = yolo_format(class_index, point_1, point_2, width, height)
+            if args.format == 'yolo':
+                line = yolo_format(class_index, point_1, point_2, width, height)
+            elif args.format == 'voc':
+                line = voc_format(class_index, point_1, point_2)
             save_bb(txt_path, line)
             # reset the points
             point_1 = (-1, -1)
