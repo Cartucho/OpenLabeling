@@ -88,8 +88,8 @@ def yolo_format(class_index, point_1, point_2, height, width):
 def voc_format(class_index, point_1, point_2):
     # Order: xmin ymin xmax ymax class
     # Top left pixel is (1, 1) in VOC
-    xmin, ymin = point_1[0] + 1, point_1[1] + 1
-    xmax, ymax = point_2[0] + 1, point_2[1] + 1
+    xmin, ymin = min(point_1[0], point_2[0]) + 1, min(point_1[1], point_2[1]) + 1
+    xmax, ymax = max(point_1[0], point_2[0]) + 1, max(point_1[1], point_2[1]) + 1
     items = map(str, [xmin, ymin, xmax, ymax, class_index])
     return ' '.join(items)
 
