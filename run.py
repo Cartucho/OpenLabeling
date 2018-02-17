@@ -381,7 +381,8 @@ while True:
         cv2.displayOverlay(WINDOW_NAME, "[e] to show edges;\n"
                                 "[q] to quit;\n"
                                 "[a] or [d] to change Image;\n"
-                                "[w] or [s] to change Class.", 6000)
+                                "[w] or [s] to change Class.\n"
+                                "%s" % img_path, 6000)
     # show edges key listener
     elif pressed_key == ord('e'):
         if edges_on == True:
