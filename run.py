@@ -299,7 +299,7 @@ class_rgb = [
     (128, 128, 0), (0, 128, 0), (128, 0, 128), (0, 128, 128), (0, 0, 128)]
 class_rgb = np.array(class_rgb)
 # If there are still more classes, add new colors randomly
-num_colors_missing = len(class_rgb) - len(class_list)
+num_colors_missing = len(class_list) - len(class_rgb)
 if num_colors_missing > 0:
     more_colors = np.random.randint(0, 255+1, size=(num_colors_missing, 3))
     class_rgb = np.vstack([class_rgb, more_colors])
