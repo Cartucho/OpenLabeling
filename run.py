@@ -8,6 +8,7 @@ import cv2
 
 parser = argparse.ArgumentParser(description='YOLO v2 Bounding Box Tool')
 parser.add_argument('--format', default='yolo', type=str, choices=['yolo', 'voc'], help="Bounding box format")
+parser.add_argument('--sort', action='store_true', help="If true, shows images in order.")
 args = parser.parse_args()
 
 class_index = 0
@@ -283,6 +284,11 @@ img_dir = "images/"
 image_list = glob.glob(img_dir +'*.jpg')
 image_list.extend(glob.glob(img_dir + '*.jpeg'))
 #print(image_list)
+if args.sort:
+    image_list.sort()
+else:
+    np.random.seed(123)
+    np.random.shuffle(image_list)
 last_img_index = len(image_list) - 1
 
 # load class list
