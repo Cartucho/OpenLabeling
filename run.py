@@ -291,8 +291,18 @@ with open('class_list.txt') as f:
 #print(class_list)
 last_class_index = len(class_list) - 1
 
-# random rgb for each class
-class_rgb = np.random.random_integers(low=0, high=255, size=(len(class_list),3))
+# Make the class colors the same each session
+# The colors are in BGR order because we're using OpenCV
+class_rgb = [
+    (0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (0, 255, 255),
+    (255, 0, 255), (192, 192, 192), (128, 128, 128), (128, 0, 0),
+    (128, 128, 0), (0, 128, 0), (128, 0, 128), (0, 128, 128), (0, 0, 128)]
+class_rgb = np.array(class_rgb)
+# If there are still more classes, add new colors randomly
+num_colors_missing = len(class_list) - len(class_rgb)
+if num_colors_missing > 0:
+    more_colors = np.random.randint(0, 255+1, size=(num_colors_missing, 3))
+    class_rgb = np.vstack([class_rgb, more_colors])
 
 # create window
 WINDOW_NAME = 'Bounding Box Labeler'
