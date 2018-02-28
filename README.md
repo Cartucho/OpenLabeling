@@ -34,7 +34,7 @@ git clone https://github.com/Cartucho/yolo-boundingbox-labeler-GUI
 You need to install:
 
 - [OpenCV](https://opencv.org/) version >= 3.0
-  - [Installation in Windows](https://docs.opencv.org/master/d3/d52/tutorial_windows_install.html)
+  - Installation in Windows: `pip install opencv-python`
   - [Installation in Linux](https://docs.opencv.org/master/d7/d9f/tutorial_linux_install.html)
 - [Python](https://www.python.org/downloads/)
 
