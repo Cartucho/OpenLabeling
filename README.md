@@ -23,7 +23,7 @@ I wanted this tool to give automatic suggestions for the labels!
 
 ## Quick start
 
-To start using the YOLO Bounding Box Tool you need to [download the latest release](https://github.com/Cartucho/yolo-boundingbox-labeler-GUI/archive/v1.0.zip) or clone the repo:
+To start using the YOLO Bounding Box Tool you need to [download the latest release](https://github.com/Cartucho/yolo-boundingbox-labeler-GUI/archive/v1.1.zip) or clone the repo:
 
 ```
 git clone https://github.com/Cartucho/yolo-boundingbox-labeler-GUI
@@ -33,10 +33,10 @@ git clone https://github.com/Cartucho/yolo-boundingbox-labeler-GUI
 
 You need to install:
 
+- [Python](https://www.python.org/downloads/)
 - [OpenCV](https://opencv.org/) version >= 3.0
   - Installation in Windows: `pip install opencv-python`
   - [Installation in Linux](https://docs.opencv.org/master/d7/d9f/tutorial_linux_install.html)
-- [Python](https://www.python.org/downloads/)
 
 ### Run project
 
@@ -66,8 +66,9 @@ Keyboard, press:
 
 
 Mouse:
-  - Use two left clicks to do each bounding box
+  - Use two separate left clicks to do each bounding box
   - Use the middle mouse to zoom in and out
+  - Use double click to select a bounding box
 
 ## Authors
 
