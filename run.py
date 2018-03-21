@@ -96,7 +96,7 @@ def voc_format(class_index, point_1, point_2):
 
 
 def get_txt_path(img_path):
-    img_name = img_path.split('/')[-1]
+    img_name = os.path.basename(os.path.normpath(img_path))
     img_type = img_path.split('.')[-1]
     return bb_dir + img_name.replace(img_type, 'txt')
 
