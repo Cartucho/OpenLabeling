@@ -6,6 +6,15 @@ import os
 import numpy as np
 import cv2
 
+
+WITH_QT = True
+try:
+    cv2.namedWindow("Test")
+    cv2.displayOverlay("Test", "Test QT", 1000)
+except:
+    WITH_QT = False
+cv2.destroyAllWindows()
+
 parser = argparse.ArgumentParser(description='YOLO v2 Bounding Box Tool')
 parser.add_argument('--format', default='yolo', type=str, choices=['yolo', 'voc'], help="Bounding box format")
 parser.add_argument('--sort', action='store_true', help="If true, shows images in order.")
@@ -32,18 +41,25 @@ def change_img_index(x):
     img_index = x
     img_path = image_list[img_index]
     img = cv2.imread(img_path)
-    cv2.displayOverlay(WINDOW_NAME, "Showing image "
+    if WITH_QT:
+        cv2.displayOverlay(WINDOW_NAME, "Showing image "
                                     "" + str(img_index) + "/"
                                     "" + str(last_img_index), 1000)
-
+    else:
+        print("Showing image "
+                "" + str(img_index) + "/"
+                "" + str(last_img_index) + " path:" + img_path)
 
 def change_class_index(x):
     global class_index
     class_index = x
-    cv2.displayOverlay(WINDOW_NAME, "Selected class "
+    if WITH_QT:
+        cv2.displayOverlay(WINDOW_NAME, "Selected class "
                                 "" + str(class_index) + "/"
                                 "" + str(last_class_index) + ""
                                 "\n " + class_list[class_index],3000)
+    else:
+        print("Selected class :" + class_list[class_index])
 
 
 def draw_edges(tmp_img):
@@ -327,7 +343,8 @@ cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, change_clas
 change_img_index(0)
 edges_on = False
 
-cv2.displayOverlay(WINDOW_NAME, "Welcome!\n Press [h] for help.", 4000)
+if WITH_QT:
+    cv2.displayOverlay(WINDOW_NAME, "Welcome!\n Press [h] for help.", 4000)
 print(" Welcome!\n Select the window and press [h] for help.")
 
 if not os.path.exists(bb_dir):
@@ -367,7 +384,8 @@ while True:
             point_1 = (-1, -1)
             point_2 = (-1, -1)
         else:
-            cv2.displayOverlay(WINDOW_NAME, "Selected label: " + class_list[class_index] + ""
+            if WITH_QT:
+                cv2.displayOverlay(WINDOW_NAME, "Selected label: " + class_list[class_index] + ""
                                     "\nPress [w] or [s] to change.", 120)
 
     cv2.imshow(WINDOW_NAME, tmp_img)
@@ -393,26 +411,41 @@ while True:
 
     # help key listener
     elif pressed_key == ord('h'):
-        cv2.displayOverlay(WINDOW_NAME, "[e] to show edges;\n"
+        if WITH_QT:
+            cv2.displayOverlay(WINDOW_NAME, "[e] to show edges;\n"
                                 "[q] to quit;\n"
                                 "[a] or [d] to change Image;\n"
                                 "[w] or [s] to change Class.\n"
                                 "%s" % img_path, 6000)
+        else:
+            print("[e] to show edges;\n"
+                    "[q] to quit;\n"
+                    "[a] or [d] to change Image;\n"
+                    "[w] or [s] to change Class.\n"
+                    "%s" % img_path)
     # show edges key listener
     elif pressed_key == ord('e'):
         if edges_on == True:
             edges_on = False
-            cv2.displayOverlay(WINDOW_NAME, "Edges turned OFF!", 1000)
+            if WITH_QT:
+                cv2.displayOverlay(WINDOW_NAME, "Edges turned OFF!", 1000)
+            else:
+                print("Edges turned OFF!")
         else:
-            cv2.displayOverlay(WINDOW_NAME, "Edges turned ON!", 1000)
             edges_on = True
+            if WITH_QT:
+                cv2.displayOverlay(WINDOW_NAME, "Edges turned ON!", 1000)
+            else:
+                print("Edges turned ON!")
+            
     # quit key listener
     elif pressed_key == ord('q'):
         break
     """ Key Listeners END """
 
-    # if window gets closed then quit
-    if cv2.getWindowProperty(WINDOW_NAME,cv2.WND_PROP_VISIBLE) < 1:
-        break
+    if WITH_QT:
+        # if window gets closed then quit
+        if cv2.getWindowProperty(WINDOW_NAME,cv2.WND_PROP_VISIBLE) < 1:
+            break
 
 cv2.destroyAllWindows()
