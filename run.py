@@ -18,6 +18,8 @@ cv2.destroyAllWindows()
 parser = argparse.ArgumentParser(description='YOLO v2 Bounding Box Tool')
 parser.add_argument('--format', default='yolo', type=str, choices=['yolo', 'voc'], help="Bounding box format")
 parser.add_argument('--sort', action='store_true', help="If true, shows images in order.")
+parser.add_argument('--cross-thickness', default='1', type=int, help="Cross thickness")
+parser.add_argument('--bbox-thickness', default='2', type=int, help="Bounding box thickness")
 args = parser.parse_args()
 
 class_index = 0
@@ -87,17 +89,17 @@ def increase_index(current_index, last_index):
 
 
 def draw_line(img, x, y, height, width):
-    cv2.line(img, (x, 0), (x, height), (0, 255, 255))
-    cv2.line(img, (0, y), (width, y), (0, 255, 255))
+    cv2.line(img, (x, 0), (x, height), (0, 255, 255), thickness=args.cross_thickness)
+    cv2.line(img, (0, y), (width, y), (0, 255, 255), thickness=args.cross_thickness)
 
 
-def yolo_format(class_index, point_1, point_2, height, width):
+def yolo_format(class_index, point_1, point_2, width, height):
     # YOLO wants everything normalized
     # Order: class x_center y_center x_width y_height
-    x_center = (point_1[0] + point_2[0]) / float(2.0 * height)
-    y_center = (point_1[1] + point_2[1]) / float(2.0 * width)
-    x_width = float(abs(point_2[0] - point_1[0])) / height
-    y_height = float(abs(point_2[1] - point_1[1])) / width
+    x_center = (point_1[0] + point_2[0]) / float(2.0 * width)
+    y_center = (point_1[1] + point_2[1]) / float(2.0 * height)
+    x_width = float(abs(point_2[0] - point_1[0])) / width
+    y_height = float(abs(point_2[1] - point_1[1])) / height
     return str(class_index) + " " + str(x_center) \
        + " " + str(y_center) + " " + str(x_width) + " " + str(y_height)
 
@@ -178,7 +180,7 @@ def draw_bboxes_from_file(tmp_img, txt_path, width, height):
                 x1, y1, x2, y2 = x1-1, y1-1, x2-1, y2-1
             img_objects.append([class_index, x1, y1, x2, y2])
             color = class_rgb[class_index].tolist()
-            cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, 2)
+            cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, thickness=args.bbox_thickness)
             tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color)
     return tmp_img
 
@@ -371,7 +373,7 @@ while True:
     if point_1[0] is not -1:
         color = class_rgb[class_index].tolist()
         # draw partial bbox
-        cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, 2)
+        cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, thickness=args.bbox_thickness)
         # if second click
         if point_2[0] is not -1:
             # save the bounding box
