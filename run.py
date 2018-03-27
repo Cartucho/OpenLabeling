@@ -91,13 +91,13 @@ def draw_line(img, x, y, height, width):
     cv2.line(img, (0, y), (width, y), (0, 255, 255))
 
 
-def yolo_format(class_index, point_1, point_2, height, width):
+def yolo_format(class_index, point_1, point_2, width, height):
     # YOLO wants everything normalized
     # Order: class x_center y_center x_width y_height
-    x_center = (point_1[0] + point_2[0]) / float(2.0 * height)
-    y_center = (point_1[1] + point_2[1]) / float(2.0 * width)
-    x_width = float(abs(point_2[0] - point_1[0])) / height
-    y_height = float(abs(point_2[1] - point_1[1])) / width
+    x_center = (point_1[0] + point_2[0]) / float(2.0 * width)
+    y_center = (point_1[1] + point_2[1]) / float(2.0 * height)
+    x_width = float(abs(point_2[0] - point_1[0])) / width
+    y_height = float(abs(point_2[1] - point_1[1])) / height
     return str(class_index) + " " + str(x_center) \
        + " " + str(y_center) + " " + str(x_width) + " " + str(y_height)
 
