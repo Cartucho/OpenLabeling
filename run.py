@@ -88,9 +88,9 @@ def increase_index(current_index, last_index):
     return current_index
 
 
-def draw_line(img, x, y, height, width):
-    cv2.line(img, (x, 0), (x, height), (0, 255, 255), thickness=args.cross_thickness)
-    cv2.line(img, (0, y), (width, y), (0, 255, 255), thickness=args.cross_thickness)
+def draw_line(img, x, y, height, width, color):
+    cv2.line(img, (x, 0), (x, height), color, thickness=args.cross_thickness)
+    cv2.line(img, (0, y), (width, y), color, thickness=args.cross_thickness)
 
 
 def yolo_format(class_index, point_1, point_2, width, height):
@@ -352,6 +352,7 @@ print(" Welcome!\n Select the window and press [h] for help.")
 if not os.path.exists(bb_dir):
     os.makedirs(bb_dir)
 
+color = class_rgb[class_index].tolist()
 # loop
 while True:
     # clone the img
@@ -361,7 +362,7 @@ while True:
         # draw edges
         tmp_img = draw_edges(tmp_img)
     # draw vertical and horizong yellow guide lines
-    draw_line(tmp_img, mouse_x, mouse_y, height, width)
+    draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
     img_path = image_list[img_index]
     txt_path = get_txt_path(img_path)
     # draw already done bounding boxes
@@ -409,6 +410,8 @@ while True:
         # change up current class key listener
         elif pressed_key == ord('w'):
             class_index = increase_index(class_index, last_class_index)
+        color = class_rgb[class_index].tolist()
+        draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
         cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
 
     # help key listener
