@@ -1,7 +1,7 @@
-# YOLO v2 Bounding Box Tool
+# OpenLabeling - Open Source YOLO Bounding Box Tool
 
-[![New](https://img.shields.io/badge/2018-NEW-brightgreen.svg)](https://github.com/Cartucho/yolo-boundingbox-labeler-GUI/commits/master)
-[![GitHub stars](https://img.shields.io/github/stars/Cartucho/yolo-boundingbox-labeler-GUI.svg?style=social&label=Stars)](https://github.com/Cartucho/yolo-boundingbox-labeler-GUI)
+[![New](https://img.shields.io/badge/2018-NEW-brightgreen.svg)](https://github.com/Cartucho/OpenLabeling/commits/master)
+[![GitHub stars](https://img.shields.io/github/stars/Cartucho/OpenLabeling.svg?style=social&label=Stars)](https://github.com/Cartucho/OpenLabeling)
 
 Bounding box labeler tool to generate the training data in the format YOLO v2 requires.
 
@@ -11,7 +11,7 @@ Bounding box labeler tool to generate the training data in the format YOLO v2 re
 The idea is to use OpenCV so that later it uses SIFT and Tracking algorithms to make labeling easier.
 
 I wanted this tool to give automatic suggestions for the labels!
-[New Features Discussion](https://github.com/Cartucho/yolo-boundingbox-labeler-GUI/issues/3)
+[New Features Discussion](https://github.com/Cartucho/OpenLabeling/issues/3)
 
 ## Table of contents
 
@@ -23,10 +23,10 @@ I wanted this tool to give automatic suggestions for the labels!
 
 ## Quick start
 
-To start using the YOLO Bounding Box Tool you need to [download the latest release](https://github.com/Cartucho/yolo-boundingbox-labeler-GUI/archive/v1.2.zip) or clone the repo:
+To start using the YOLO Bounding Box Tool you need to [download the latest release](https://github.com/Cartucho/OpenLabeling/archive/v1.2.zip) or clone the repo:
 
 ```
-git clone https://github.com/Cartucho/yolo-boundingbox-labeler-GUI
+git clone https://github.com/Cartucho/OpenLabeling
 ```
 
 ### Prerequisites
@@ -54,7 +54,7 @@ Step by step:
 
 Keyboard, press: 
 
-<img src="https://github.com/Cartucho/yolo-boundingbox-labeler-GUI/blob/master/keyboard_usage.jpg">
+<img src="https://github.com/Cartucho/OpenLabeling/blob/master/keyboard_usage.jpg">
 
 | Key | Description |
 | --- | --- |
@@ -76,4 +76,4 @@ Mouse:
 
     Feel free to contribute
 
-    [![GitHub contributors](https://img.shields.io/github/contributors/Cartucho/yolo-boundingbox-labeler-GUI.svg)](https://github.com/Cartucho/yolo-boundingbox-labeler-GUI/graphs/contributors)
+    [![GitHub contributors](https://img.shields.io/github/contributors/Cartucho/OpenLabeling.svg)](https://github.com/Cartucho/OpenLabeling/graphs/contributors)
