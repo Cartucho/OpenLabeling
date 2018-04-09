@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser(description='YOLO v2 Bounding Box Tool')
 parser.add_argument('--format', default='yolo', type=str, choices=['yolo', 'voc'], help="Bounding box format")
 parser.add_argument('--sort', action='store_true', help="If true, shows images in order.")
 parser.add_argument('--cross-thickness', default='1', type=int, help="Cross thickness")
-parser.add_argument('--bbox-thickness', default='2', type=int, help="Bounding box thickness")
+parser.add_argument('--bbox-thickness', default='1', type=int, help="Bounding box thickness")
 args = parser.parse_args()
 
 class_index = 0
@@ -146,9 +146,9 @@ def yolo_to_x_y(x_center, y_center, x_width, y_height, width, height):
     return int(x_center - x_width), int(y_center - y_height), int(x_center + x_width), int(y_center + y_height)
 
 
-def draw_text(tmp_img, text, center, color):
+def draw_text(tmp_img, text, center, color, size):
     font = cv2.FONT_HERSHEY_SIMPLEX
-    cv2.putText(tmp_img, text, center, font, 0.6, color, 2, cv2.LINE_AA)
+    cv2.putText(tmp_img, text, center, font, 0.6, color, size, cv2.LINE_AA)
     return tmp_img
 
 def draw_bboxes_from_file(tmp_img, txt_path, width, height):
@@ -181,7 +181,7 @@ def draw_bboxes_from_file(tmp_img, txt_path, width, height):
             img_objects.append([class_index, x1, y1, x2, y2])
             color = class_rgb[class_index].tolist()
             cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, thickness=args.bbox_thickness)
-            tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color)
+            tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color, args.bbox_thickness)
     return tmp_img
 
 
