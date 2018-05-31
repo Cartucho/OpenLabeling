@@ -339,7 +339,8 @@ cv2.createTrackbar(TRACKBAR_IMG, WINDOW_NAME, 0, last_img_index, change_img_inde
 
 # selected class
 TRACKBAR_CLASS = 'Class'
-cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, change_class_index)
+if last_class_index != 0:
+  cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, change_class_index)
 
 # initialize
 change_img_index(0)
