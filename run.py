@@ -297,10 +297,19 @@ def draw_info_bb_selected(tmp_img):
     return tmp_img
 
 
+# imgs extensions lists.
+all_exts = {}
+all_exts['jpg'] = ['jpg', 'jpeg', 'JPG']
+all_exts['png'] = ['png', 'PNG']
+all_exts['tiff'] = ['tiff', 'tff', 'TIFF']
+all_exts['bmp'] = ['bmp', 'BMP']
+selected_exts = ['jpg', 'png', 'tiff', 'bmp']
 # load img list
 img_dir = "images/"
-image_list = glob.glob(img_dir +'*.jpg')
-image_list.extend(glob.glob(img_dir + '*.jpeg'))
+image_list = []
+for ext in selected_exts:
+    image_list.extend(glob.glob(img_dir +'*.{}'.format(ext)))
+
 #print(image_list)
 image_list.sort()
 if not args.sort:
