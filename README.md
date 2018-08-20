@@ -69,6 +69,7 @@ Mouse:
   - Use two separate left clicks to do each bounding box
   - Use the middle mouse to zoom in and out
   - Use double click to select a bounding box
+  - Right click to quickly delete a bounding box
 
 ## Authors
 
