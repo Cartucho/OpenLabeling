@@ -242,6 +242,11 @@ def mouse_listener(event, x, y, flags, param):
         point_1 = (-1, -1)
         # if clicked inside a bounding box
         set_selected_bbox()
+    # AlexeyGy change: delete via right-click
+    elif event == cv2.EVENT_RBUTTONDOWN:
+        set_selected_bbox()
+        if is_bbox_selected:
+            delete_selected_bbox()
     elif event == cv2.EVENT_LBUTTONDOWN:
         if prev_was_double_click:
             #print("Finish double click")
@@ -264,11 +269,6 @@ def mouse_listener(event, x, y, flags, param):
                 if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
                     # second click
                     point_2 = (x, y)
-    # AlexeyGy change: delete via right-click
-    elif event == cv2.EVENT_RBUTTONDOWN:
-        set_selected_bbox()
-        if is_bbox_selected:
-            delete_selected_bbox()
 
 
 def is_mouse_inside_points(x1, y1, x2, y2):
