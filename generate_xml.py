@@ -21,7 +21,6 @@
 
 from lxml import etree
 import xml.etree.cElementTree as ET
-from tqdm import tqdm
 import cv2
 import os
 import argparse
@@ -91,42 +90,39 @@ with open(args.class_list, 'r') as f:
 for i in range(len(labels)):
     labels[i] = labels[i].replace('\n', '')
 
-with tqdm(total=len(os.listdir(imagefolder))) as pbar:
-    for imagename in os.listdir(imagefolder):
-        img = cv2.imread(os.path.join(imagefolder, imagename))
+for imagename in os.listdir(imagefolder):
+    img = cv2.imread(os.path.join(imagefolder, imagename))
 
-        imgHeight, imgWidth, depth = img.shape
+    imgHeight, imgWidth, depth = img.shape
 
-        with open(os.path.join(bbox_txt, os.path.splitext(imagename)[0] + '.txt')) as f:
-            content = f.readlines()
+    with open(os.path.join(bbox_txt, os.path.splitext(imagename)[0] + '.txt')) as f:
+        content = f.readlines()
 
-        bounding_boxes = []
+    bounding_boxes = []
 
-        for line in content:
-            values_str = line.split()
-            if format == 'yolo':
-                class_index, x_center, y_center, x_width, y_height = map(float, values_str)
-                class_index = int(class_index)
-                bboxx1, bboxy1, bboxx2, bboxy2 = yolo_to_x_y(x_center, y_center, x_width, y_height, imgWidth, imgHeight)
-                if x_center == int(x_center):
-                    error = ("You selected the 'yolo' format but your labels "
-                             "seem to be in a different format. Consider "
-                             "removing your old label files.")
-                    raise Exception(textwrap.fill(error, 70))
-            else:
-                try:
-                    x1, y1, x2, y2, class_index = map(int, values_str)
-                except ValueError:
-                    error = ("You selected the 'voc' format but your labels "
-                             "seem to be in a different format. Consider "
-                             "removing your old label files.")
-                    raise Exception(textwrap.fill(error, 70))
-                bboxx1, bboxy1, bboxx2, bboxy2 = x1-1, y1-1, x2-1, y2-1
+    for line in content:
+        values_str = line.split()
+        if format == 'yolo':
+            class_index, x_center, y_center, x_width, y_height = map(float, values_str)
+            class_index = int(class_index)
+            bboxx1, bboxy1, bboxx2, bboxy2 = yolo_to_x_y(x_center, y_center, x_width, y_height, imgWidth, imgHeight)
+            if x_center == int(x_center):
+                error = ("You selected the 'yolo' format but your labels "
+                         "seem to be in a different format. Consider "
+                         "removing your old label files.")
+                raise Exception(textwrap.fill(error, 70))
+        else:
+            try:
+                x1, y1, x2, y2, class_index = map(int, values_str)
+            except ValueError:
+                error = ("You selected the 'voc' format but your labels "
+                         "seem to be in a different format. Consider "
+                         "removing your old label files.")
+                raise Exception(textwrap.fill(error, 70))
+            bboxx1, bboxy1, bboxx2, bboxy2 = x1-1, y1-1, x2-1, y2-1
 
-            label_name = labels[class_index]
+        label_name = labels[class_index]
 
-            bounding_boxes.append([label_name, bboxx1, bboxy1, bboxx2, bboxy2])
+        bounding_boxes.append([label_name, bboxx1, bboxy1, bboxx2, bboxy2])
 
-        write_xml(saveDir, imagefolder, imagename, imgWidth, imgHeight, depth, bounding_boxes, pose="Unspecified")
-
-        pbar.update(1)
+    write_xml(saveDir, imagefolder, imagename, imgWidth, imgHeight, depth, bounding_boxes, pose="Unspecified")
