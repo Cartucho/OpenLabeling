@@ -313,6 +313,15 @@ if not args.sort:
     np.random.shuffle(image_list)
 last_img_index = len(image_list) - 1
 
+if not os.path.exists(bb_dir):
+    os.makedirs(bb_dir)
+
+# create empty .txt file for each of the images if it doesn't exist already
+for img_path in image_list:
+    txt_path = get_txt_path(img_path)
+    if not os.path.isfile(txt_path):
+         open(txt_path, 'a').close()
+
 # load class list
 with open('class_list.txt') as f:
     class_list = f.read().splitlines()
@@ -355,9 +364,6 @@ if WITH_QT:
     cv2.displayOverlay(WINDOW_NAME, "Welcome!\n Press [h] for help.", 4000)
 print(" Welcome!\n Select the window and press [h] for help.")
 
-if not os.path.exists(bb_dir):
-    os.makedirs(bb_dir)
-
 color = class_rgb[class_index].tolist()
 # loop
 while True:
@@ -367,7 +373,7 @@ while True:
     if edges_on == True:
         # draw edges
         tmp_img = draw_edges(tmp_img)
-    # draw vertical and horizong yellow guide lines
+    # draw vertical and horizontal guide lines
     draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
     img_path = image_list[img_index]
     txt_path = get_txt_path(img_path)
