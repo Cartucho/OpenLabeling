@@ -84,6 +84,9 @@ imagefolder = args.img_dir
 saveDir = args.save_dir
 format = args.format
 
+if not os.path.exists(saveDir):
+    os.makedirs(saveDir)
+
 with open(args.class_list, 'r') as f:
     labels = f.readlines()
 
