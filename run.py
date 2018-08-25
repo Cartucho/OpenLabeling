@@ -33,8 +33,6 @@ prev_was_double_click = False
 is_bbox_selected = False
 selected_bbox = -1
 
-square_box = True
-
 mouse_x = 0
 mouse_y = 0
 point_1 = (-1, -1)
@@ -65,9 +63,6 @@ def change_class_index(x):
     else:
         print("Selected class :" + class_list[class_index])
 
-def change_box_type(x):
-    global square_box
-    square_box = x == 0
 
 def draw_edges(tmp_img):
     blur = cv2.bilateralFilter(tmp_img, 3, 75, 75)
@@ -268,11 +263,7 @@ def mouse_listener(event, x, y, flags, param):
                 threshold = 20
                 if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
                     # second click
-                    if square_box:
-                        max_diff = max(x - point_1[0], y - point_1[1])
-                        point_2 = (point_1[0] + max_diff, point_1[1] + max_diff)
-                    else:
-                        point_2 = (x, y)
+                    point_2 = (x, y)
 
 
 def is_mouse_inside_points(x1, y1, x2, y2):
@@ -360,9 +351,6 @@ TRACKBAR_CLASS = 'Class'
 if last_class_index != 0:
   cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, change_class_index)
 
-TRACKBAR_BOX = 'Box type'
-cv2.createTrackbar(TRACKBAR_BOX, WINDOW_NAME, 0, 1, change_box_type)
-
 # initialize
 change_img_index(0)
 edges_on = False
@@ -396,13 +384,7 @@ while True:
     if point_1[0] is not -1:
         color = class_rgb[class_index].tolist()
         # draw partial bbox
-        tmp_point = None
-        if square_box:
-            max_diff = max(mouse_x - point_1[0], mouse_y - point_1[1])
-            tmp_point = (point_1[0] + max_diff, point_1[1] + max_diff)
-        else:
-            tmp_point = (mouse_x, mouse_y)
-        cv2.rectangle(tmp_img, point_1, tmp_point, color, thickness=args.bbox_thickness)
+        cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, thickness=args.bbox_thickness)
         # if second click
         if point_2[0] is not -1:
             # save the bounding box
