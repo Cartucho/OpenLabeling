@@ -39,17 +39,17 @@ def write_xml(saveDir, imagefolder, imagename, imgWidth, imgHeight, depth, bound
     for box in bounding_boxes:
         obj = ET.SubElement(annotation, 'object')
 
-        ET.SubElement(obj, 'name').text = str(label_name)
+        ET.SubElement(obj, 'name').text = str(box[0])
         ET.SubElement(obj, 'pose').text = str(pose)
         ET.SubElement(obj, 'truncated').text = '0'
         ET.SubElement(obj, 'difficult').text = '0'
 
         bbox = ET.SubElement(obj, 'bndbox')
 
-        ET.SubElement(bbox, 'xmin').text = str(bboxx1)
-        ET.SubElement(bbox, 'ymin').text = str(bboxy1)
-        ET.SubElement(bbox, 'xmax').text = str(bboxx2)
-        ET.SubElement(bbox, 'ymax').text = str(bboxy2)
+        ET.SubElement(bbox, 'xmin').text = str(box[1])
+        ET.SubElement(bbox, 'ymin').text = str(box[2])
+        ET.SubElement(bbox, 'xmax').text = str(box[3])
+        ET.SubElement(bbox, 'ymax').text = str(box[4])
 
     xml_str = ET.tostring(annotation)
     root = etree.fromstring(xml_str)
