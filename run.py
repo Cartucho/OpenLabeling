@@ -251,24 +251,24 @@ def mouse_listener(event, x, y, flags, param):
         if prev_was_double_click:
             #print("Finish double click")
             prev_was_double_click = False
-        else:
-            #print("Normal left click")
-            is_mouse_inside_delete_button = mouse_inside_delete_button()
-            if point_1[0] is -1:
-                if is_bbox_selected and is_mouse_inside_delete_button:
-                    # the user wants to delete the bbox
-                    #print("Delete bbox")
-                    delete_selected_bbox()
-                else:
-                    is_bbox_selected = False
-                    # first click (start drawing a bounding box or delete an item)
-                    point_1 = (x, y)
+
+        #print("Normal left click")
+        is_mouse_inside_delete_button = mouse_inside_delete_button()
+        if point_1[0] is -1:
+            if is_bbox_selected and is_mouse_inside_delete_button:
+                # the user wants to delete the bbox
+                #print("Delete bbox")
+                delete_selected_bbox()
             else:
-                # minimal size for bounding box to avoid errors
-                threshold = 20
-                if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
-                    # second click
-                    point_2 = (x, y)
+                is_bbox_selected = False
+                # first click (start drawing a bounding box or delete an item)
+                point_1 = (x, y)
+        else:
+            # minimal size for bounding box to avoid errors
+            threshold = 20
+            if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
+                # second click
+                point_2 = (x, y)
 
 
 def is_mouse_inside_points(x1, y1, x2, y2):
