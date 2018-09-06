@@ -24,7 +24,7 @@ I wanted this tool to give automatic suggestions for the labels!
 
 ## Quick start
 
-To start using the YOLO Bounding Box Tool you need to [download the latest release](https://github.com/Cartucho/OpenLabeling/archive/v1.2.zip) or clone the repo:
+To start using the YOLO Bounding Box Tool you need to [download the latest release](https://github.com/Cartucho/OpenLabeling/archive/v1.3.zip) or clone the repo:
 
 ```
 git clone https://github.com/Cartucho/OpenLabeling
