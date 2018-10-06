@@ -225,7 +225,7 @@ def delete_selected_bbox():
     with open(txt_path, "w") as new_file:
         counter = 0
         for line in lines:
-            if counter is not selected_bbox:
+            if counter != selected_bbox:
                 new_file.write(line)
             counter += 1
 
