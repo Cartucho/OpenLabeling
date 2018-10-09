@@ -20,13 +20,15 @@ parser.add_argument('--format', default='yolo', type=str, choices=['yolo', 'voc'
 parser.add_argument('--sort', action='store_true', help="If true, shows images in order.")
 parser.add_argument('--cross-thickness', default='1', type=int, help="Cross thickness")
 parser.add_argument('--bbox-thickness', default='1', type=int, help="Bounding box thickness")
+parser.add_argument('--img_dir', default='images/', type=str, help="Path to Image Directory")
+parser.add_argument('--bb_dir', default='bbox_txt/', type=str, help="Path to Bbox Directory")
 args = parser.parse_args()
 
 class_index = 0
 img_index = 0
 img = None
 img_objects = []
-bb_dir = "bbox_txt/"
+bb_dir = args.bb_dir
 
 # selected bounding box
 prev_was_double_click = False
@@ -303,7 +305,7 @@ def draw_info_bb_selected(tmp_img):
 
 
 # load all images (with multiple extensions) from a directory using OpenCV
-img_dir = "images/"
+img_dir = args.img_dir
 image_list = []
 for f in os.listdir(img_dir):
     f_path = os.path.join(img_dir, f)
