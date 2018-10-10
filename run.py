@@ -6,6 +6,7 @@ import os
 import numpy as np
 import cv2
 
+from box_predictor import LabelTracker
 
 WITH_QT = True
 try:
@@ -17,7 +18,7 @@ cv2.destroyAllWindows()
 
 parser = argparse.ArgumentParser(description='YOLO v2 Bounding Box Tool')
 parser.add_argument('--format', default='yolo', type=str, choices=['yolo', 'voc'], help="Bounding box format")
-parser.add_argument('--sort', action='store_true', help="If true, shows images in order.")
+parser.add_argument('--sort', action='store_false', help="If true, shows images in order.")
 parser.add_argument('--cross-thickness', default='1', type=int, help="Cross thickness")
 parser.add_argument('--bbox-thickness', default='1', type=int, help="Bounding box thickness")
 args = parser.parse_args()
@@ -62,6 +63,15 @@ def change_class_index(x):
                                 "\n " + class_list[class_index],3000)
     else:
         print("Selected class :" + class_list[class_index])
+
+num_predictions = 30
+def change_num_predictions(x):
+    num_predictions = x
+    if WITH_QT:
+        cv2.displayOverlay(WINDOW_NAME, "Images to predict "
+                                "" + str(num_predictions),3000)
+    else:
+        print("Images to predict: " + str(num_predictions))
 
 
 def draw_edges(tmp_img):
@@ -151,9 +161,13 @@ def draw_text(tmp_img, text, center, color, size):
     cv2.putText(tmp_img, text, center, font, 0.6, color, size, cv2.LINE_AA)
     return tmp_img
 
-def draw_bboxes_from_file(tmp_img, txt_path, width, height):
+def draw_bboxes_from_file(tmp_img, txt_path, width, height, is_prediction=False):
     global img_objects
     img_objects = []
+
+    if is_prediction:
+        txt_path.replace('bbox_txt', 'tmp', 1)
+
     if os.path.isfile(txt_path):
         with open(txt_path) as f:
             content = f.readlines()
@@ -179,9 +193,13 @@ def draw_bboxes_from_file(tmp_img, txt_path, width, height):
                     raise Exception(textwrap.fill(error, 70))
                 x1, y1, x2, y2 = x1-1, y1-1, x2-1, y2-1
             img_objects.append([class_index, x1, y1, x2, y2])
-            color = class_rgb[class_index].tolist()
+            if not is_prediction:
+                color = class_rgb[class_index].tolist()
+            else:
+                color = class_rgb[class_index+1].tolist()
             cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, thickness=args.bbox_thickness)
             tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color, args.bbox_thickness)
+
     return tmp_img
 
 
@@ -346,6 +364,8 @@ if num_colors_missing > 0:
     more_colors = np.random.randint(0, 255+1, size=(num_colors_missing, 3))
     class_rgb = np.vstack([class_rgb, more_colors])
 
+label_tracker = LabelTracker(image_list)
+
 # create window
 WINDOW_NAME = 'Bounding Box Labeler'
 cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_KEEPRATIO)
@@ -360,6 +380,10 @@ cv2.createTrackbar(TRACKBAR_IMG, WINDOW_NAME, 0, last_img_index, change_img_inde
 TRACKBAR_CLASS = 'Class'
 if last_class_index != 0:
   cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, change_class_index)
+
+# number imgs prediction
+TRACKBAR_PREDICTION = 'Number of imgs to predict'
+cv2.createTrackbar(TRACKBAR_PREDICTION, WINDOW_NAME, num_predictions, 30, change_num_predictions)
 
 # initialize
 change_img_index(0)
@@ -384,6 +408,7 @@ while True:
     txt_path = get_txt_path(img_path)
     # draw already done bounding boxes
     tmp_img = draw_bboxes_from_file(tmp_img, txt_path, width, height)
+    tmp_img = draw_bboxes_from_file(tmp_img, txt_path, width, height, is_prediction=True)
     # if bounding box is selected add extra info
     if is_bbox_selected:
         tmp_img = draw_info_bb_selected(tmp_img)
@@ -430,6 +455,8 @@ while True:
         color = class_rgb[class_index].tolist()
         draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
         cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
+    elif pressed_key == ord('p'):
+        label_tracker.predict_next_imgs(img_index, num_predictions)
 
     # help key listener
     elif pressed_key == ord('h'):
