@@ -16,9 +16,9 @@ class LabelTracker():
         if not self.is_opencv_version_ok():
             raise Exception('OpenCV version is under v3')
 
-        self.imgs_path_list = imgs_path_list
-        self.create_tmp_txt_files()
+        self.remove_tmp_folder()
 
+        self.imgs_path_list = imgs_path_list
 
     def predict_next_imgs(self, current_img_index, num_imgs_to_predict):
         current_img = cv2.imread(self.imgs_path_list[current_img_index])
@@ -68,19 +68,19 @@ class LabelTracker():
         else:
             return True
 
-    def create_tmp_txt_files(self):
-        if not os.path.exists('tmp/'):
-            os.makedirs('tmp/')
-
-        for img_path in self.imgs_path_list:
-            txt_path = self.get_txt_path(img_path)
-            if not os.path.isfile(txt_path):
-                open(txt_path, 'a').close()
-
     def get_txt_path(self, img_path, folder='tmp/'):
         img_name = os.path.basename(os.path.normpath(img_path))
         img_type = img_path.split('.')[-1]
-        return folder + img_name.replace(img_type, 'txt')
+        txt_path = folder + img_name.replace(img_type, 'txt')
+
+        if folder == 'tmp/':
+            if not os.path.exists('tmp/'):
+                os.makedirs('tmp/')
+
+            if not os.path.isfile(txt_path):
+                open(txt_path, 'a').close()
+
+        return txt_path
 
     def remove_tmp_folder(self):
         if os.path.exists('tmp/'):
