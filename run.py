@@ -161,44 +161,46 @@ def draw_text(tmp_img, text, center, color, size):
     cv2.putText(tmp_img, text, center, font, 0.6, color, size, cv2.LINE_AA)
     return tmp_img
 
-def draw_bboxes_from_file(tmp_img, txt_path, width, height, is_prediction=False):
+def draw_bboxes_from_file(tmp_img, txt_path, width, height):
     global img_objects
     img_objects = []
 
-    if is_prediction:
-        txt_path.replace('bbox_txt', 'tmp', 1)
+    txt_paths = [txt_path, txt_path.replace('bbox_txt', 'tmp', 1)]
 
-    if os.path.isfile(txt_path):
-        with open(txt_path) as f:
-            content = f.readlines()
-        for line in content:
-            values_str = line.split()
-            if args.format == 'yolo':
-                class_index, x_center, y_center, x_width, y_height = map(float, values_str)
-                class_index = int(class_index)
-                # convert yolo to points
-                x1, y1, x2, y2 = yolo_to_x_y(x_center, y_center, x_width, y_height, width, height)
-                if x_center == int(x_center):
-                    error = ("You selected the 'yolo' format but your labels "
-                             "seem to be in a different format. Consider "
-                             "removing your old label files.")
-                    raise Exception(textwrap.fill(error, 70))
-            elif args.format == 'voc':
-                try:
-                    x1, y1, x2, y2, class_index = map(int, values_str)
-                except ValueError:
-                    error = ("You selected the 'voc' format but your labels "
-                             "seem to be in a different format. Consider "
-                             "removing your old label files.")
-                    raise Exception(textwrap.fill(error, 70))
-                x1, y1, x2, y2 = x1-1, y1-1, x2-1, y2-1
-            img_objects.append([class_index, x1, y1, x2, y2])
-            if not is_prediction:
-                color = class_rgb[class_index].tolist()
-            else:
-                color = class_rgb[class_index+1].tolist()
-            cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, thickness=args.bbox_thickness)
-            tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color, args.bbox_thickness)
+    is_prediction = False
+    for path in txt_paths:
+        if os.path.isfile(path):
+            with open(path) as f:
+                content = f.readlines()
+            for line in content:
+                values_str = line.split()
+                if args.format == 'yolo':
+                    class_index, x_center, y_center, x_width, y_height = map(float, values_str)
+                    class_index = int(class_index)
+                    # convert yolo to points
+                    x1, y1, x2, y2 = yolo_to_x_y(x_center, y_center, x_width, y_height, width, height)
+                    if x_center == int(x_center):
+                        error = ("You selected the 'yolo' format but your labels "
+                                 "seem to be in a different format. Consider "
+                                 "removing your old label files.")
+                        raise Exception(textwrap.fill(error, 70))
+                elif args.format == 'voc':
+                    try:
+                        x1, y1, x2, y2, class_index = map(int, values_str)
+                    except ValueError:
+                        error = ("You selected the 'voc' format but your labels "
+                                 "seem to be in a different format. Consider "
+                                 "removing your old label files.")
+                        raise Exception(textwrap.fill(error, 70))
+                    x1, y1, x2, y2 = x1-1, y1-1, x2-1, y2-1
+                img_objects.append([class_index, x1, y1, x2, y2])
+                if is_prediction:
+                    color = class_rgb[class_index+1].tolist()
+                else:
+                    color = class_rgb[class_index].tolist()
+                cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, thickness=args.bbox_thickness)
+                tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color, args.bbox_thickness)
+        is_prediction = True
 
     return tmp_img
 
@@ -408,7 +410,6 @@ while True:
     txt_path = get_txt_path(img_path)
     # draw already done bounding boxes
     tmp_img = draw_bboxes_from_file(tmp_img, txt_path, width, height)
-    tmp_img = draw_bboxes_from_file(tmp_img, txt_path, width, height, is_prediction=True)
     # if bounding box is selected add extra info
     if is_bbox_selected:
         tmp_img = draw_info_bb_selected(tmp_img)

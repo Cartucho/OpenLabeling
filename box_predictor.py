@@ -42,7 +42,9 @@ class LabelTracker():
             for line in content:
                 values_str = line.split()
                 class_index, x_center, y_center, x_width, y_height = map(float, values_str)
-                roi = (x_center*current_img_width, y_center*current_img_height, x_width*current_img_width, y_height*current_img_height)
+                x_tl = x_center*current_img_width - (x_width*current_img_width/2.0)
+                y_tl = y_center*current_img_height - (y_height*current_img_height/2.0)
+                roi = (x_tl, y_tl, x_width*current_img_width, y_height*current_img_height)
                 tracker = cv2.TrackerKCF_create()
                 tracker.init(current_img, roi)
                 classWithTracker.append((class_index, tracker))
@@ -85,6 +87,7 @@ class LabelTracker():
         y_center = (point_1[1] + point_2[1]) / float(2.0 * height)
         x_width = float(abs(point_2[0] - point_1[0])) / width
         y_height = float(abs(point_2[1] - point_1[1])) / height
-        return str(class_index) + " " + str(x_center) \
-               + " " + str(y_center) + " " + str(x_width) + " " + str(y_height)
+        return str(int(class_index)) + " " + str(round(x_center, 6)) \
+               + " " + str(round(y_center, 6)) + " " + str(round(x_width, 6)) \
+               + " " + str(round(y_height, 6))
 
