@@ -7,19 +7,16 @@
 #------------------------------------------------------------------------------------------------
 
 import os
-import numpy as np
 import cv2
 
 class LabelTracker():
-    def __init__(self, imgs_path_list, type='KCF'):
+    def __init__(self, imgs_path_list):
 
         if not self.is_opencv_version_ok():
             raise Exception('OpenCV version is under v3')
 
         self.imgs_path_list = imgs_path_list
         self.create_tmp_txt_files()
-
-        self.tracker_type = type
 
 
     def predict_next_imgs(self, current_img_index, num_imgs_to_predict):
@@ -45,8 +42,10 @@ class LabelTracker():
                 x_tl = x_center*current_img_width - (x_width*current_img_width/2.0)
                 y_tl = y_center*current_img_height - (y_height*current_img_height/2.0)
                 roi = (x_tl, y_tl, x_width*current_img_width, y_height*current_img_height)
+
                 tracker = cv2.TrackerKCF_create()
                 tracker.init(current_img, roi)
+
                 classWithTracker.append((class_index, tracker))
 
             # predict
