@@ -59,7 +59,19 @@ class LabelTracker():
                             line = self.yolo_format(class_index, (bbox[0], bbox[1]),
                                                     (bbox[0]+bbox[2], bbox[1]+bbox[3]),
                                                     current_img_width, current_img_height)
-                            f.write(line + "\n")
+                            if not self.is_line_already_in_file(line, temp_txt_path):
+                                f.write(line + "\n")
+
+    def is_line_already_in_file(self, new_line, file_path):
+        file = open(file_path)
+        content = file.readlines()
+        for line in content:
+            if line == new_line:
+                file.close()
+                return True
+        file.close()
+        return False
+
 
     def is_opencv_version_ok(self):
         (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
