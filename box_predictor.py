@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------------------------
 
 import os
+import glob
 import cv2
 
 class LabelTracker():
@@ -80,6 +81,13 @@ class LabelTracker():
         img_name = os.path.basename(os.path.normpath(img_path))
         img_type = img_path.split('.')[-1]
         return folder + img_name.replace(img_type, 'txt')
+
+    def remove_tmp_folder(self):
+        if os.path.exists('tmp/'):
+            file_list = glob.glob(os.path.abspath('tmp/') + str('/*.txt'))
+            for file in file_list:
+                os.remove(file)
+            os.rmdir('tmp')
 
     def yolo_format(self, class_index, point_1, point_2, width, height):
         x_center = (point_1[0] + point_2[0]) / float(2.0 * width)

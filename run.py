@@ -490,12 +490,14 @@ while True:
             
     # quit key listener
     elif pressed_key == ord('q'):
+        label_tracker.remove_tmp_folder()
         break
     """ Key Listeners END """
 
     if WITH_QT:
         # if window gets closed then quit
         if cv2.getWindowProperty(WINDOW_NAME,cv2.WND_PROP_VISIBLE) < 1:
+            label_tracker.remove_tmp_folder()
             break
 
 cv2.destroyAllWindows()
