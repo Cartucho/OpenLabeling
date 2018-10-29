@@ -303,6 +303,25 @@ def draw_info_bb_selected(tmp_img):
             draw_close_icon(tmp_img, x1_c, y1_c, x2_c, y2_c)
     return tmp_img
 
+def change_selected_bbox(c):
+    img_path = image_list[img_index]
+    txt_path = get_txt_path(img_path)
+    is_bbox_selected = True
+
+    with open(txt_path, "r") as old_file:
+        lines = old_file.readlines()
+
+    with open(txt_path, "w") as new_file:
+        counter = 0
+        for line in lines:
+            if counter != selected_bbox:
+                new_file.write(line)
+            else:
+                split = line.split()
+                new_cat  = str(int(split[0])+c)
+                new_file.write(" ".join([new_cat,' '.join(split[1:])])+'\n')
+            counter += 1
+
 
 # load all images (with multiple extensions) from a directory using OpenCV
 img_dir = args.img_dir
@@ -461,6 +480,13 @@ while True:
                 cv2.displayOverlay(WINDOW_NAME, "Edges turned ON!", 1000)
             else:
                 print("Edges turned ON!")
+    # Change the label of the selected box        
+    elif pressed_key == ord('f'):
+        if is_bbox_selected:
+            change_selected_bbox(-1)
+    elif pressed_key == ord('r'):
+        if is_bbox_selected:
+            change_selected_bbox(1)
             
     # quit key listener
     elif pressed_key == ord('q'):
