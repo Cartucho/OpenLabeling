@@ -7,6 +7,7 @@ import numpy as np
 import cv2
 
 
+DELAY = 20 # mouse delay (in milliseconds)
 WITH_QT = True
 try:
     cv2.namedWindow("Test")
@@ -411,7 +412,7 @@ while True:
                                     "\nPress [w] or [s] to change.", 120)
 
     cv2.imshow(WINDOW_NAME, tmp_img)
-    pressed_key = cv2.waitKey(50)
+    pressed_key = cv2.waitKey(DELAY)
 
     """ Key Listeners START """
     if pressed_key == ord('a') or pressed_key == ord('d'):
