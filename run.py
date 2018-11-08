@@ -21,15 +21,13 @@ parser.add_argument('--format', default='yolo', type=str, choices=['yolo', 'voc'
 parser.add_argument('--sort', action='store_true', help="If true, shows images in order.")
 parser.add_argument('--cross-thickness', default='1', type=int, help="Cross thickness")
 parser.add_argument('--bbox-thickness', default='1', type=int, help="Bounding box thickness")
-parser.add_argument('--img_dir', default='images/', type=str, help="Path to Image Directory")
-parser.add_argument('--bb_dir', default='bbox_txt/', type=str, help="Path to Bbox Directory")
 args = parser.parse_args()
 
 class_index = 0
 img_index = 0
 img = None
 img_objects = []
-bb_dir = args.bb_dir
+bb_dir = "bbox_txt/"
 
 # selected bounding box
 prev_was_double_click = False
@@ -231,6 +229,7 @@ def delete_selected_bbox():
             if counter != selected_bbox:
                 new_file.write(line)
             counter += 1
+			
 
 # mouse callback function
 def mouse_listener(event, x, y, flags, param):
@@ -303,10 +302,30 @@ def draw_info_bb_selected(tmp_img):
             x1_c, y1_c, x2_c, y2_c = get_close_icon(x1, y1, x2, y2)
             draw_close_icon(tmp_img, x1_c, y1_c, x2_c, y2_c)
     return tmp_img
+	
+def change_selected_bbox(c):
+    img_path = image_list[img_index]
+    txt_path = get_txt_path(img_path)
+    is_bbox_selected = True
+
+    with open(txt_path, "r") as old_file:
+        lines = old_file.readlines()
+
+    with open(txt_path, "w") as new_file:
+        counter = 0
+        for line in lines:
+            if counter != selected_bbox:
+                new_file.write(line)
+            else:
+                split = line.split()
+                new_cat  = str(int(split[0])+c)
+                new_file.write(" ".join([new_cat,' '.join(split[1:])])+'\n')
+            counter += 1
+			
 
 
 # load all images (with multiple extensions) from a directory using OpenCV
-img_dir = args.img_dir
+img_dir = "images/"
 image_list = []
 for f in os.listdir(img_dir):
     f_path = os.path.join(img_dir, f)
@@ -424,16 +443,24 @@ while True:
             img_index = increase_index(img_index, last_img_index)
         cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
     elif pressed_key == ord('s') or pressed_key == ord('w'):
-        # change down current class key listener
-        if pressed_key == ord('s'):
-            class_index = decrease_index(class_index, last_class_index)
-        # change up current class key listener
-        elif pressed_key == ord('w'):
-            class_index = increase_index(class_index, last_class_index)
+        if is_bbox_selected:
+            if pressed_key == ord('s'):
+                #increse label of the selectec box
+                change_selected_bbox(-1)
+            else:
+                #decrease label of the selected box
+                change_selected_bbox(1)
+        else:
+            if pressed_key == ord('s'):
+                # change down current class key listener
+                class_index = decrease_index(class_index, last_class_index)
+            else:
+                # change up current class key listener
+                class_index = increase_index(class_index, last_class_index)
         color = class_rgb[class_index].tolist()
         draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
         cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
-
+    
     # help key listener
     elif pressed_key == ord('h'):
         if WITH_QT:
@@ -463,11 +490,12 @@ while True:
             else:
                 print("Edges turned ON!")
             
+    
     # quit key listener
     elif pressed_key == ord('q'):
         break
+    
     """ Key Listeners END """
-
     if WITH_QT:
         # if window gets closed then quit
         if cv2.getWindowProperty(WINDOW_NAME,cv2.WND_PROP_VISIBLE) < 1:
