@@ -124,18 +124,6 @@ def save_bb(txt_path, line):
         myfile.write(line + "\n") # append line
 
 
-def delete_bb(txt_path, line_index):
-    with open(txt_path, "r") as old_file:
-        lines = old_file.readlines()
-
-    with open(txt_path, "w") as new_file:
-        counter = 0
-        for line in lines:
-            if counter is not line_index:
-                new_file.write(line)
-            counter += 1
-
-
 def yolo_to_x_y(x_center, y_center, x_width, y_height, width, height):
     x_center *= width
     y_center *= height
@@ -215,6 +203,7 @@ def mouse_inside_delete_button():
     return False
 
 def delete_selected_bbox():
+    global class_index
     img_path = image_list[img_index]
     txt_path = get_txt_path(img_path)
     is_bbox_selected = False
@@ -227,9 +216,13 @@ def delete_selected_bbox():
         for line in lines:
             if counter != selected_bbox:
                 new_file.write(line)
+            else:
+                class_index = int(line.split()[0])
             counter += 1
-			
-
+    new_file.close()
+    print('deleted')
+    
+        
 # mouse callback function
 def mouse_listener(event, x, y, flags, param):
     global is_bbox_selected, prev_was_double_click, mouse_x, mouse_y, point_1, point_2
@@ -248,6 +241,10 @@ def mouse_listener(event, x, y, flags, param):
         set_selected_bbox()
         if is_bbox_selected:
             delete_selected_bbox()
+            
+            color = class_rgb[class_index].tolist()
+            draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
+            cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
     elif event == cv2.EVENT_LBUTTONDOWN:
         if prev_was_double_click:
             #print("Finish double click")
@@ -260,6 +257,10 @@ def mouse_listener(event, x, y, flags, param):
                 # the user wants to delete the bbox
                 #print("Delete bbox")
                 delete_selected_bbox()
+
+                color = class_rgb[class_index].tolist()
+                draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
+                cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
             else:
                 is_bbox_selected = False
                 # first click (start drawing a bounding box or delete an item)
@@ -302,7 +303,7 @@ def draw_info_bb_selected(tmp_img):
             draw_close_icon(tmp_img, x1_c, y1_c, x2_c, y2_c)
     return tmp_img
 	
-def change_selected_bbox(c):
+def change_selected_bbox(c, last_class_index):
     img_path = image_list[img_index]
     txt_path = get_txt_path(img_path)
     is_bbox_selected = True
@@ -317,7 +318,12 @@ def change_selected_bbox(c):
                 new_file.write(line)
             else:
                 split = line.split()
-                new_cat  = str(int(split[0])+c)
+                new_cat  = int(split[0])+c
+                if new_cat > last_class_index:
+                    new_cat = 0
+                elif new_cat <0:
+                    new_cat = last_class_index
+                new_cat = str(new_cat)
                 new_file.write(" ".join([new_cat,' '.join(split[1:])])+'\n')
             counter += 1
 			
@@ -437,7 +443,7 @@ while True:
         # show previous image key listener
         if pressed_key == ord('a'):
             img_index = decrease_index(img_index, last_img_index)
-        # show next image key listener
+            # show next image key listener
         elif pressed_key == ord('d'):
             img_index = increase_index(img_index, last_img_index)
         cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
@@ -445,15 +451,15 @@ while True:
         if is_bbox_selected:
             if pressed_key == ord('s'):
                 #increse label of the selectec box
-                change_selected_bbox(-1)
-            else:
+                change_selected_bbox(-1, last_class_index)
+            if pressed_key == ord('w'):
                 #decrease label of the selected box
-                change_selected_bbox(1)
+                change_selected_bbox(1, last_class_index)
         else:
             if pressed_key == ord('s'):
                 # change down current class key listener
                 class_index = decrease_index(class_index, last_class_index)
-            else:
+            if pressed_key == ord('w'):
                 # change up current class key listener
                 class_index = increase_index(class_index, last_class_index)
         color = class_rgb[class_index].tolist()
