@@ -12,7 +12,7 @@ WITH_QT = True
 try:
     cv2.namedWindow("Test")
     cv2.displayOverlay("Test", "Test QT", 1000)
-except Exception as e:
+except:
     WITH_QT = False
 cv2.destroyAllWindows()
 
