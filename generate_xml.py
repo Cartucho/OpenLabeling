@@ -26,7 +26,7 @@ import os
 import argparse
 
 def write_xml(saveDir, imagefolder, imagename, imgWidth, imgHeight, depth, bounding_boxes, pose="Unspecified"):
-    annotation = ET.Element("annotaion")
+    annotation = ET.Element("annotation")
     ET.SubElement(annotation, 'folder').text = str(imagefolder)
     ET.SubElement(annotation, 'filename').text = str(imagename)
     size = ET.SubElement(annotation, 'size')
