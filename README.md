@@ -50,7 +50,6 @@ Step by step:
   2. Insert the classes in the file **class_list.txt** (one class name per line)
   3. Run the code:
 
-         ```
          python main.py [-h] [-i] [-o] [-t]
 
          optional arguments:
@@ -58,7 +57,6 @@ Step by step:
           -i, --input               Path to images and videos input folder | Default: input/
           -o, --output              Path to output folder (if using the PASCAL VOC format it's important to set this path correctly) | Default: output/
           -t, --thickness           Bounding box and cross line thickness
-         ```
 
   4. You can find the output files in the folder **output/**
 
