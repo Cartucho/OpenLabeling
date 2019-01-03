@@ -39,8 +39,8 @@ You need to install:
     1. `python -mpip install -U pip`
     2. `python -mpip install -U opencv-python`
 - numpy and tqdm:
-    `python -mpip install -U numpy`
-    `python -mpip install -U tqdm`
+    1. `python -mpip install -U numpy`
+    2. `python -mpip install -U tqdm`
 
 ### Run project
 
@@ -49,6 +49,7 @@ Step by step:
   1. Insert the input images and videos in the folder **input/**
   2. Insert the classes in the file **class_list.txt** (one class name per line)
   3. Run the code:
+
          ```
          python main.py [-h] [-i] [-o] [-t]
 
@@ -58,6 +59,7 @@ Step by step:
           -o, --output              Path to output folder (if using the PASCAL VOC format it's important to set this path correctly) | Default: output/
           -t, --thickness           Bounding box and cross line thickness
          ```
+
   4. You can find the output files in the folder **output/**
 
 ### GUI usage
