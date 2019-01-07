@@ -576,12 +576,13 @@ while True:
         elif pressed_key == ord('d'):
             img_index = increase_index(img_index, last_img_index)
         cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
-    elif pressed_key == ord('s') or pressed_key == ord('w'):
-        # change down current class key listener
-        if pressed_key == ord('s'):
-            class_index = decrease_index(class_index, last_class_index)
+        set_img_index(img_index)
+    elif pressed_key == ord('w') or pressed_key == ord('s'):
         # change up current class key listener
-        elif pressed_key == ord('w'):
+        if pressed_key == ord('w'):
+            class_index = decrease_index(class_index, last_class_index)
+        # change down current class key listener
+        elif pressed_key == ord('s'):
             class_index = increase_index(class_index, last_class_index)
         draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
         cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
