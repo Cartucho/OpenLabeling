@@ -1,4 +1,4 @@
-# OpenLabeling - Open-source image labeling tool
+# OpenLabeling: open-source image labeling tool
 
 [![GitHub stars](https://img.shields.io/github/stars/Cartucho/OpenLabeling.svg?style=social&label=Stars)](https://github.com/Cartucho/OpenLabeling)
 
@@ -9,9 +9,10 @@ Image labeling in multiple annotation formats:
 <img src="https://media.giphy.com/media/l49JDgDSygJN369vW/giphy.gif" width="40%"><img src="https://media.giphy.com/media/3ohc1csRs9PoDgCeuk/giphy.gif" width="40%">
 <img src="https://media.giphy.com/media/3o752fXKwTJJkhXP32/giphy.gif" width="40%"><img src="https://media.giphy.com/media/3ohc11t9auzSo6fwLS/giphy.gif" width="40%">
 
-The idea is to use OpenCV so that later it uses SIFT and Tracking algorithms to make labeling easier.
+## Latest Features
 
-I wanted this tool to give automatic suggestions for the labels!
+- Jan 2019: video object tracking with OpenCV trackers!
+- TODO: Label photos via Google drive to allow "team online labeling".
 [New Features Discussion](https://github.com/Cartucho/OpenLabeling/issues/3)
 
 ## Table of contents
@@ -46,9 +47,10 @@ You need to install:
 
 Step by step:
 
-  1. Insert the input images and videos in the folder **input/**
-  2. Insert the classes in the file **class_list.txt** (one class name per line)
-  3. Run the code:
+  1. Open the `main/` directory
+  2. Insert the input images and videos in the folder **input/**
+  3. Insert the classes in the file **class_list.txt** (one class name per line)
+  4. Run the code:
 
          python main.py [-h] [-i] [-o] [-t]
 
@@ -56,9 +58,9 @@ Step by step:
           -h, --help                Show this help message and exit
           -i, --input               Path to images and videos input folder | Default: input/
           -o, --output              Path to output folder (if using the PASCAL VOC format it's important to set this path correctly) | Default: output/
-          -t, --thickness           Bounding box and cross line thickness
+          -t, --thickness           Bounding box and cross line thickness (int) | Default: -t 1
 
-  4. You can find the output files in the folder **output/**
+  5. You can find the annotations in the folder **output/**
 
 ### GUI usage
 
@@ -68,18 +70,23 @@ Keyboard, press:
 
 | Key | Description |
 | --- | --- |
-| h | help |
-| q | quit |
-| e | edges |
 | a/d | previous/next image |
 | s/w | previous/next class |
+| e | edges |
+| h | help |
+| q | quit |
 
+Video:
+
+| Key | Description |
+| --- | --- |
+| p | predict the next frame's labels |
 
 Mouse:
   - Use two separate left clicks to do each bounding box
+  - **Right-click** -> **quick delete**!
   - Use the middle mouse to zoom in and out
   - Use double click to select a bounding box
-  - Right click to quickly delete a bounding box
 
 ## Authors
 
