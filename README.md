@@ -1,10 +1,11 @@
-# OpenLabeling: open-source image labeling tool
+# OpenLabeling: open-source image and video labeler
 
 [![GitHub stars](https://img.shields.io/github/stars/Cartucho/OpenLabeling.svg?style=social&label=Stars)](https://github.com/Cartucho/OpenLabeling)
 
 Image labeling in multiple annotation formats:
 - PASCAL VOC (= [darkflow](https://github.com/thtrieu/darkflow))
 - [YOLO darknet](https://github.com/pjreddie/darknet)
+- ask for more (create a new issue)...
 
 <img src="https://media.giphy.com/media/l49JDgDSygJN369vW/giphy.gif" width="40%"><img src="https://media.giphy.com/media/3ohc1csRs9PoDgCeuk/giphy.gif" width="40%">
 <img src="https://media.giphy.com/media/3o752fXKwTJJkhXP32/giphy.gif" width="40%"><img src="https://media.giphy.com/media/3ohc11t9auzSo6fwLS/giphy.gif" width="40%">
@@ -80,7 +81,7 @@ Video:
 
 | Key | Description |
 | --- | --- |
-| p | predict the next frame's labels |
+| p | predict the next frames' labels |
 
 Mouse:
   - Use two separate left clicks to do each bounding box
