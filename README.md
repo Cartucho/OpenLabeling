@@ -1,5 +1,24 @@
 # OpenLabeling: open-source image and video labeler
 
+
+# New features:
+- Click-drag-resize
+- Auto labeling by using combination between Tracker and Deep Learning Object Detection Model
+
+# How to use
+- Put the video files into `input` directory
+- Download deep learning model from https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
+  and put it into `object_detection` directory. 
+  **Note**: Default model used in `main_auto.py` is `ssdlite_mobilenet_v2_coco_2018_05_09`
+- Using `main_auto.py` to automatically label data first
+- Using `main.py` to manually label with the support of Tracker.
+
+# Plan 
+- Fix some bugs
+- Clean code a bit
+- Improve algorithm a bit
+- Combine with state of the art deep learning tracker
+
 [![GitHub stars](https://img.shields.io/github/stars/Cartucho/OpenLabeling.svg?style=social&label=Stars)](https://github.com/Cartucho/OpenLabeling)
 
 Image labeling in multiple annotation formats:
