@@ -12,6 +12,14 @@ from lxml import etree
 import xml.etree.cElementTree as ET
 
 
+# from object_detection.tf_object_detection import ObjectDetector
+
+# graph_model_path = "../object_detection/ssdlite_mobilenet_v2_coco_2018_05_09/frozen_inference_graph.pb"
+# graph_model_path = "../object_detection/faster_rcnn_nas_coco_2018_01_28/frozen_inference_graph.pb"
+
+# detector = ObjectDetector(graph_path=graph_model_path)
+print("Init object detection")
+
 DELAY = 20 # keyboard delay (in milliseconds)
 WITH_QT = False
 try:
@@ -34,7 +42,7 @@ img_index = 0
 img = None
 img_objects = []
 
-https://github.com/vuthede/OpenLabeling.gitINPUT_DIR = args.input_dir
+INPUT_DIR = args.input_dir
 OUTPUT_DIR = args.output_dir
 
 WINDOW_NAME = 'OpenLabeling'
@@ -1220,6 +1228,23 @@ while True:
                     class_index = obj[0]
                     color = class_rgb[class_index].tolist()
                     label_tracker.start_tracker(json_file_data, json_file_path, img_path, obj, color, annotation_formats)
+
+    # Object detector
+    # elif pressed_key == ord('m'):
+    #     im_rgb  = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    #     boxes, confidences, classIds =  detector.detect(im_rgb, catIds=1)
+    #
+    #     print("ML model found {} people:".format(len(boxes)))
+    #
+    #     boxes = boxes.astype(int)
+    #     for box in boxes:
+    #         print(box)
+    #         point_1 = (box[0], box[1])
+    #         point_2 = (box[0] + box[2], box[1] + box[3])
+    #         save_bounding_box(annotation_paths, class_index, point_1, point_2, width, height)
+    #
+    #     tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width, height)
+
     # quit key listener
     elif pressed_key == ord('q'):
         break
