@@ -85,6 +85,7 @@ Keyboard, press:
 | h | show help |
 | p | predict objects in following video frames  |
 | q | quit |
+| x | export a package for yolo_darknet training |
 
 Video:
 
