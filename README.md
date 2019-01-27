@@ -81,8 +81,9 @@ Keyboard, press:
 | --- | --- |
 | a/d | previous/next image |
 | s/w | previous/next class |
-| e | edges |
-| h | help |
+| e | show edges |
+| h | show help |
+| p | predict objects in following video frames  |
 | q | quit |
 
 Video:

@@ -1,6 +1,5 @@
 #!/bin/python
 import argparse
-import glob
 import json
 import os
 
@@ -852,10 +851,12 @@ while True:
             edit_bbox('change_class:{}'.format(class_index))
     # help key listener
     elif pressed_key == ord('h'):
-        text = ('[e] to show edges;\n'
-                '[q] to quit;\n'
-                '[a] or [d] to change Image;\n'
-                '[w] or [s] to change Class.\n'
+        text = ('[a] / [d] - previous/next image\n'
+                '[w] / [s] - previous/next class\n'
+                '[e] - show edges\n'
+                '[h] - show help (this message)\n'
+                '[p] - predict objects in following video frames\n'
+                '[q] - quit\n'
                 )
         display_text(text, 5000)
     # show edges key listener
