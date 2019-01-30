@@ -83,27 +83,27 @@ class dragBBox:
         LB -- MB -- RB
     '''
 
-    #Index of object image which is dragged
+    # Size of resizing anchors (depends on LINE_THICKNESS)
+    sRA = LINE_THICKNESS * 2
+
+    # Object being dragged
     selected_object = None
 
-    # Size of resizing-anchors (depends on LINE_THICKNESS)
-    sBlk = LINE_THICKNESS * 2
-
-    # Flags indicating which resizing-anchor is dragged
+    # Flag indicating which resizing-anchor is dragged
     anchor_being_dragged = None
 
     '''
     \brief This method is used to check if a current mouse position is inside one of the resizing anchors of a bbox
     '''
     @staticmethod
-    def checkPointInsideResizingAnchors(eX, eY, obj):
+    def check_point_inside_resizing_anchors(eX, eY, obj):
         _class_name, x_left, y_top, x_right, y_bottom = obj
         # first check if inside the bbox region (to avoid making 8 comparisons per object)
         if pointInRect(eX, eY,
-                        x_left - dragBBox.sBlk,
-                        y_top - dragBBox.sBlk,
-                        x_right + dragBBox.sBlk,
-                        y_bottom + dragBBox.sBlk):
+                        x_left - dragBBox.sRA,
+                        y_top - dragBBox.sRA,
+                        x_right + dragBBox.sRA,
+                        y_bottom + dragBBox.sRA):
 
             anchor_dict = get_anchors_rectangles(x_left, y_top, x_right, y_bottom)
             for anchor_key in anchor_dict:
@@ -113,27 +113,25 @@ class dragBBox:
                     break
 
     '''
-    \brief This method will check if the mouse position inside a resizing anchor of any bboxes
-           If there is, choose the bbox and enable flag of this resizing anchor
+    \brief This method is used to select an object if one presses a resizing anchor
     '''
     @staticmethod
-    def handlerLeftMouseDown(eX, eY, image_object):
+    def handler_left_mouse_down(eX, eY, image_object):
         # Find selected_image_object_index
         if img_objects is not None:
             for idx, obj in enumerate(img_objects):
-                dragBBox.checkPointInsideResizingAnchors(eX, eY, obj)
+                dragBBox.check_point_inside_resizing_anchors(eX, eY, obj)
                 if dragBBox.anchor_being_dragged is not None:
                     dragBBox.selected_object = obj
                     break
 
-
     @staticmethod
-    def handlerMouseMove(eX, eY):
+    def handler_mouse_move(eX, eY):
         if dragBBox.selected_object is not None:
             class_name, x_left, y_top, x_right, y_bottom = dragBBox.selected_object
 
             # Do not allow the bbox to flip upside down (given a margin)
-            margin = 3 * dragBBox.sBlk
+            margin = 3 * dragBBox.sRA
             change_was_made = False
 
             if dragBBox.anchor_being_dragged[0] == "L":
@@ -148,12 +146,12 @@ class dragBBox:
                     change_was_made = True
 
             if dragBBox.anchor_being_dragged[1] == "T":
-                # LT, RT, MT
+                # top anchors (LT, RT, MT)
                 if eY < y_bottom - margin:
                     y_top = eY
                     change_was_made = True
             elif dragBBox.anchor_being_dragged[1] == "B":
-                # LB, RB, MB
+                # bottom anchors (LB, RB, MB)
                 if eY > y_top + margin:
                     y_bottom = eY
                     change_was_made = True
@@ -164,12 +162,11 @@ class dragBBox:
                 # update the selected bbox
                 dragBBox.selected_object = [class_name, x_left, y_top, x_right, y_bottom]
 
-
     '''
-    \brief This method will return new bbox after being dragged and this object index
+    \brief This method will reset this class
      '''
     @staticmethod
-    def handlerLeftMouseUp(eX, eY):
+    def handler_left_mouse_up(eX, eY):
         if dragBBox.selected_object is not None:
             dragBBox.selected_object = None
             dragBBox.anchor_being_dragged = None
@@ -318,12 +315,12 @@ def get_anchors_rectangles(xmin, ymin, xmax, ymax):
     mid_x = (xmin + xmax) / 2
     mid_y = (ymin + ymax) / 2
 
-    L_ = [xmin - dragBBox.sBlk, xmin + dragBBox.sBlk]
-    M_ = [mid_x - dragBBox.sBlk, mid_x + dragBBox.sBlk]
-    R_ = [xmax - dragBBox.sBlk, xmax + dragBBox.sBlk]
-    _T = [ymin - dragBBox.sBlk, ymin + dragBBox.sBlk]
-    _M = [mid_y - dragBBox.sBlk, mid_y + dragBBox.sBlk]
-    _B = [ymax - dragBBox.sBlk, ymax + dragBBox.sBlk]
+    L_ = [xmin - dragBBox.sRA, xmin + dragBBox.sRA]
+    M_ = [mid_x - dragBBox.sRA, mid_x + dragBBox.sRA]
+    R_ = [xmax - dragBBox.sRA, xmax + dragBBox.sRA]
+    _T = [ymin - dragBBox.sRA, ymin + dragBBox.sRA]
+    _M = [mid_y - dragBBox.sRA, mid_y + dragBBox.sRA]
+    _B = [ymax - dragBBox.sRA, ymax + dragBBox.sRA]
 
     anchor_list['LT'] = [L_[0], _T[0], L_[1], _T[1]]
     anchor_list['MT'] = [M_[0], _T[0], M_[1], _T[1]]
@@ -558,7 +555,7 @@ def mouse_listener(event, x, y, flags, param):
         #print('Normal left click')
 
         # Check if mouse inside on of resizing anchors of any bboxes
-        dragBBox.handlerLeftMouseDown(x, y, img_objects)
+        dragBBox.handler_left_mouse_down(x, y, img_objects)
 
         if dragBBox.anchor_being_dragged is None:
             if point_1[0] is -1:
@@ -579,7 +576,7 @@ def mouse_listener(event, x, y, flags, param):
 
     elif event == cv2.EVENT_LBUTTONUP:
         if dragBBox.anchor_being_dragged is not None:
-            dragBBox.handlerLeftMouseUp(x, y)
+            dragBBox.handler_left_mouse_up(x, y)
 
 
 
@@ -995,7 +992,7 @@ while True:
     img_path = IMAGE_PATH_LIST[img_index]
     annotation_paths = get_annotation_paths(img_path, annotation_formats)
     if dragBBox.anchor_being_dragged is not None:
-        dragBBox.handlerMouseMove(mouse_x, mouse_y)
+        dragBBox.handler_mouse_move(mouse_x, mouse_y)
     # draw already done bounding boxes
     tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width, height)
     # if bounding box is selected add extra info
