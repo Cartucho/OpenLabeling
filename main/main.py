@@ -334,11 +334,11 @@ def get_anchors_rectangles(xmin, ymin, xmax, ymax):
     return anchor_list
 
 
-def draw_bbox_anchors(tmp_img, (xmin, ymin), (xmax, ymax), color):
+def draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color):
     anchor_dict = get_anchors_rectangles(xmin, ymin, xmax, ymax)
     for anchor_key in anchor_dict:
         x1, y1, x2, y2 = anchor_dict[anchor_key]
-        cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, -1)
+        cv2.rectangle(tmp_img, (int(x1), int(y1)), (int(x2), int(y2)), color, -1)
     return tmp_img
 
 def draw_bboxes_from_file(tmp_img, annotation_paths, width, height):
@@ -356,7 +356,7 @@ def draw_bboxes_from_file(tmp_img, annotation_paths, width, height):
             # draw bbox
             cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
             # draw resizing anchors
-            tmp_img = draw_bbox_anchors(tmp_img, (xmin, ymin), (xmax, ymax), color)
+            tmp_img = draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color)
             tmp_img = draw_text(tmp_img, class_name, (xmin, ymin - 5), color, LINE_THICKNESS)
     return tmp_img
 
