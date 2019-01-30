@@ -12,6 +12,7 @@ Image labeling in multiple annotation formats:
 
 ## Latest Features
 
+- Jan 2019: easy and quick bounding-boxe's resizing!
 - Jan 2019: video object tracking with OpenCV trackers!
 - TODO: Label photos via Google drive to allow "team online labeling".
 [New Features Discussion](https://github.com/Cartucho/OpenLabeling/issues/3)
