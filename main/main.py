@@ -84,7 +84,7 @@ class dragBBox:
     '''
 
     #Index of object image which is dragged
-    selected_image_object_index = None
+    selected_object = None
 
     # Size of resizing-anchors (depends on LINE_THICKNESS)
     sBlk = LINE_THICKNESS * 2
@@ -92,14 +92,8 @@ class dragBBox:
     # Flags indicating which resizing-anchor is dragged
     anchor_being_dragged = None
 
-    # New position of the bbox (image object) after being dragged
-    new_x = 0
-    new_y = 0
-    new_w = 0
-    new_h = 0
-
     '''
-    \brief This method used to check if a current mouse position is inside one of resizing anchors of a bbox
+    \brief This method is used to check if a current mouse position is inside one of the resizing anchors of a bbox
     '''
     @staticmethod
     def checkPointInsideResizingAnchors(eX, eY, obj):
@@ -113,87 +107,72 @@ class dragBBox:
 
             anchor_dict = get_anchors_rectangles(x_left, y_top, x_right, y_bottom)
             for anchor_key in anchor_dict:
-                x1, y1, x2, y2 = anchor_dict[anchor_key]
-                if pointInRect(eX, eY, x1, y1, x2, y2):
+                rX_left, rY_top, rX_right, rY_bottom = anchor_dict[anchor_key]
+                if pointInRect(eX, eY, rX_left, rY_top, rX_right, rY_bottom):
                     dragBBox.anchor_being_dragged = anchor_key
                     break
 
     '''
     \brief This method will check if the mouse position inside a resizing anchor of any bboxes
            If there is, choose the bbox and enable flag of this resizing anchor
-    \return True or False.
     '''
     @staticmethod
     def handlerLeftMouseDown(eX, eY, image_object):
         # Find selected_image_object_index
         if img_objects is not None:
             for idx, obj in enumerate(img_objects):
-
                 dragBBox.checkPointInsideResizingAnchors(eX, eY, obj)
-
                 if dragBBox.anchor_being_dragged is not None:
-                    dragBBox.new_x = obj[1]
-                    dragBBox.new_y = obj[2]
-                    dragBBox.new_w = np.abs(obj[3] - obj[1])
-                    dragBBox.new_h = np.abs(obj[4] - obj[2])
-
-                    dragBBox.selected_image_object_index = idx
+                    dragBBox.selected_object = obj
                     break
 
 
     @staticmethod
     def handlerMouseMove(eX, eY):
-        if not dragBBox.selected_image_object_index is None:
-            #Todo
-            pass
+        if dragBBox.selected_object is not None:
+            class_name, x_left, y_top, x_right, y_bottom = dragBBox.selected_object
+
+            # Do not allow the bbox to flip upside down (given a margin)
+            margin = 3 * dragBBox.sBlk
+            change_was_made = False
+
+            if dragBBox.anchor_being_dragged[0] == "L":
+                # left anchors (LT, LM, LB)
+                if eX < x_right - margin:
+                    x_left = eX
+                    change_was_made = True
+            elif dragBBox.anchor_being_dragged[0] == "R":
+                # right anchors (RT, RM, RB)
+                if eX > x_left + margin:
+                    x_right = eX
+                    change_was_made = True
+
+            if dragBBox.anchor_being_dragged[1] == "T":
+                # LT, RT, MT
+                if eY < y_bottom - margin:
+                    y_top = eY
+                    change_was_made = True
+            elif dragBBox.anchor_being_dragged[1] == "B":
+                # LB, RB, MB
+                if eY > y_top + margin:
+                    y_bottom = eY
+                    change_was_made = True
+
+            if change_was_made:
+                action = "resize_bbox:{}:{}:{}:{}".format(x_left, y_top, x_right, y_bottom)
+                edit_bbox(dragBBox.selected_object, action)
+                # update the selected bbox
+                dragBBox.selected_object = [class_name, x_left, y_top, x_right, y_bottom]
+
 
     '''
     \brief This method will return new bbox after being dragged and this object index
      '''
     @staticmethod
     def handlerLeftMouseUp(eX, eY):
-        if dragBBox.selected_image_object_index is not None:
-
-            if dragBBox.anchor_being_dragged == "LT":
-                dragBBox.new_w = (dragBBox.new_x + dragBBox.new_w) - eX
-                dragBBox.new_h = (dragBBox.new_y + dragBBox.new_h) - eY
-                dragBBox.new_x = eX
-                dragBBox.new_y = eY
-
-            if dragBBox.anchor_being_dragged == "RT":
-                dragBBox.new_h = (dragBBox.new_y + dragBBox.new_h) - eY
-                dragBBox.new_y = eY
-                dragBBox.new_w = eX - dragBBox.new_x
-
-            if dragBBox.anchor_being_dragged == "LB":
-                dragBBox.new_w = (dragBBox.new_x + dragBBox.new_w) - eX
-                dragBBox.new_x = eX
-                dragBBox.new_h = eY - dragBBox.new_y
-
-            if dragBBox.anchor_being_dragged == "RB":
-                dragBBox.new_w = eX - dragBBox.new_x
-                dragBBox.new_h = eY - dragBBox.new_y
-
-            if dragBBox.anchor_being_dragged == "MT":
-                dragBBox.new_h = (dragBBox.new_y + dragBBox.new_h) - eY
-                dragBBox.new_y = eY
-
-            if dragBBox.anchor_being_dragged == "MB":
-                dragBBox.new_h = eY - dragBBox.new_y
-
-            if dragBBox.anchor_being_dragged == "LM":
-                dragBBox.new_w = (dragBBox.new_x + dragBBox.new_w) - eX
-                dragBBox.new_x = eX
-
-            if dragBBox.anchor_being_dragged == "RM":
-                dragBBox.new_w = eX - dragBBox.new_x
-
-            result = dragBBox.new_x, dragBBox.new_y, dragBBox.new_w, dragBBox.new_h, dragBBox.selected_image_object_index
-
-            dragBBox.selected_image_object_index = None
+        if dragBBox.selected_object is not None:
+            dragBBox.selected_object = None
             dragBBox.anchor_being_dragged = None
-
-            return result
 
 def display_text(text, time):
     if WITH_QT:
@@ -418,124 +397,23 @@ def is_mouse_inside_delete_button():
     return False
 
 
-
-'''
-\brief Resizing bbox by changing this size in annotation path and json tracker file
-       Basically, I reuse nost of the code on `edit_box`
-'''
-def resize_bbox(index_image_object, new_x, new_y, new_x1, new_y1):
-    # 1. initialize bboxes_to_edit_dict
-    bboxes_to_edit_dict = {}
-    current_img_path = IMAGE_PATH_LIST[img_index]
-    obj_to_edit = img_objects[index_image_object]
-    bboxes_to_edit_dict[current_img_path] = obj_to_edit
-
-    is_from_video, video_name = is_frame_from_video(current_img_path)
-    if is_from_video:
-        # get json file corresponding to that video
-        json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
-        file_exists, json_file_data = get_json_file_data(json_file_path)
-        # if json file exists
-        if file_exists:
-            # match obj_to_edit with the corresponding json object
-            frame_data_dict = json_file_data['frame_data_dict']
-            json_object_list = get_json_file_object_list(current_img_path, frame_data_dict)
-            obj_to_edit = img_objects[index_image_object]
-            obj_matched = get_json_object_dict(obj_to_edit, json_object_list)
-            # if match found
-            if obj_matched is not None:
-                # get this object's anchor_id
-                anchor_id = obj_matched['anchor_id']
-
-
-
-                # update json file if contain the same anchor_id
-                # Test
-                frame_path_list = [current_img_path]
-
-                for frame_path in frame_path_list:
-                    json_object_list = get_json_file_object_list(frame_path, frame_data_dict)
-                    json_obj = get_json_file_object_by_id(json_object_list, anchor_id)
-                    if json_obj is not None:
-                        bboxes_to_edit_dict[frame_path] = [
-                            json_obj['class_index'],
-                            json_obj['bbox']['xmin'],
-                            json_obj['bbox']['ymin'],
-                            json_obj['bbox']['xmax'],
-                            json_obj['bbox']['ymax']
-                        ]
-
-                        # Change size  of bbox
-                        json_obj['bbox']['xmin'] = float(new_x)
-                        json_obj['bbox']['ymin'] = float(new_y)
-                        json_obj['bbox']['xmax'] = float(new_x1)
-                        json_obj['bbox']['ymax'] = float(new_y1)
-
-
-                    else:
-                        break
-
-                # save the edited data
-                with open(json_file_path, 'w') as outfile:
-                    json.dump(json_file_data, outfile, sort_keys=True, indent=4)
-
-        # 3. loop through bboxes_to_edit_dict and edit the corresponding annotation files
-    for path in bboxes_to_edit_dict:
-        obj_to_edit = bboxes_to_edit_dict[path]
-        class_index, xmin, ymin, xmax, ymax = map(int, obj_to_edit)
-
-        for ann_path in get_annotation_paths(path, annotation_formats):
-            if '.txt' in ann_path:
-                with open(ann_path, 'r') as old_file:
-                    lines = old_file.readlines()
-
-                yolo_line = yolo_format(class_index, (xmin, ymin), (xmax, ymax), width,
-                                        height)  # TODO: height and width ought to be stored
-
-                with open(ann_path, 'w') as new_file:
-                    for line in lines:
-                        if line != yolo_line + '\n':
-                            new_file.write(line)
-                        else:
-                            items = line.split()
-                            items[1] = str(new_x)
-                            items[2] = str(new_y)
-                            items[3] = str(new_x1)
-                            items[4] = str(new_y1)
-                            new_file.write(' '.join(items) + '\n')
-            elif '.xml' in ann_path:
-                tree = ET.parse(ann_path)
-                annotation = tree.getroot()
-                for obj in annotation.findall('object'):
-                    class_name_xml, class_index_xml, xmin_xml, ymin_xml, xmax_xml, ymax_xml = get_xml_object_data(obj)
-                    if (class_index == class_index_xml and
-                            xmin == xmin_xml and
-                            ymin == ymin_xml and
-                            xmax == xmax_xml and
-                            ymax == ymax_xml):
-
-
-                        # edit object class name
-                        obj.find('bndbox').find('xmin').text = str(new_x)
-                        obj.find('bndbox').find('ymin').text = str(new_y)
-                        obj.find('bndbox').find('xmax').text = str(new_x1)
-                        obj.find('bndbox').find('ymax').text = str(new_y1)
-                        break
-
-
-                xml_str = ET.tostring(annotation)
-                write_xml(xml_str, ann_path)
-
-
-def edit_bbox(action):
-    ''' action = (delete) or (change_class:[class_index]) '''
+def edit_bbox(obj_to_edit, action):
+    ''' action = `delete`
+                 `change_class:new_class_index`
+                 `resize_bbox:new_x_left:new_y_top:new_x_right:new_y_bottom`
+    '''
     if 'change_class' in action:
         new_class_index = int(action.split(':')[1])
+    elif 'resize_bbox' in action:
+        new_x_left = max(0, int(action.split(':')[1]))
+        new_y_top = max(0, int(action.split(':')[2]))
+        new_x_right = min(width, int(action.split(':')[3]))
+        new_y_bottom = min(height, int(action.split(':')[4]))
 
-    # 1. initialize bboxes_to_edit_dict
+    # 1. initialize bboxes_to_edit_dict 
+    #    (we use a dict since a single label can be associated with multiple ones in videos)
     bboxes_to_edit_dict = {}
     current_img_path = IMAGE_PATH_LIST[img_index]
-    obj_to_edit = img_objects[selected_bbox]
     bboxes_to_edit_dict[current_img_path] = obj_to_edit
 
     # 2. add elements to bboxes_to_edit_dict
@@ -586,6 +464,11 @@ def edit_bbox(action):
                             json_object_list.remove(json_obj)
                         elif 'change_class' in action:
                             json_obj['class_index'] = new_class_index
+                        elif 'resize_bbox' in action:
+                            json_obj['bbox']['xmin'] = new_x_left
+                            json_obj['bbox']['ymin'] = new_y_top
+                            json_obj['bbox']['xmax'] = new_x_right
+                            json_obj['bbox']['ymax'] = new_y_bottom
                     else:
                         break
 
@@ -600,6 +483,7 @@ def edit_bbox(action):
 
         for ann_path in get_annotation_paths(path, annotation_formats):
             if '.txt' in ann_path:
+                # edit YOLO file
                 with open(ann_path, 'r') as old_file:
                     lines = old_file.readlines()
 
@@ -610,10 +494,13 @@ def edit_bbox(action):
                         if line != yolo_line + '\n':
                             new_file.write(line)
                         elif 'change_class' in action:
-                            items = line.split()
-                            items[0] = str(new_class_index)
-                            new_file.write(' '.join(items) + '\n')
+                            new_yolo_line = yolo_format(new_class_index, (xmin, ymin), (xmax, ymax), width, height)
+                            new_file.write(new_yolo_line + '\n')
+                        elif 'resize_bbox' in action:
+                            new_yolo_line = yolo_format(class_index, (new_x_left, new_y_top), (new_x_right, new_y_bottom), width, height)
+                            new_file.write(new_yolo_line + '\n')
             elif '.xml' in ann_path:
+                # edit PASCAL VOC file
                 tree = ET.parse(ann_path)
                 annotation = tree.getroot()
                 for obj in annotation.findall('object'):
@@ -625,10 +512,16 @@ def edit_bbox(action):
                                      ymax == ymax_xml ) :
                         if 'delete' in action:
                             annotation.remove(obj)
-                        else:
+                        elif 'change_class' in action:
                             # edit object class name
                             object_class = obj.find('name')
                             object_class.text = CLASS_LIST[new_class_index]
+                        elif 'resize_bbox' in action:
+                            object_bbox = obj.find('bndbox')
+                            object_bbox.find('xmin').text = str(new_x_left)
+                            object_bbox.find('ymin').text = str(new_y_top)
+                            object_bbox.find('xmax').text = str(new_x_right)
+                            object_bbox.find('ymax').text = str(new_y_bottom)
                         break
 
                 xml_str = ET.tostring(annotation)
@@ -654,7 +547,8 @@ def mouse_listener(event, x, y, flags, param):
         set_class = False
         set_selected_bbox(set_class)
         if is_bbox_selected:
-            edit_bbox('delete')
+            obj_to_edit = img_objects[selected_bbox]
+            edit_bbox(obj_to_edit, 'delete')
             is_bbox_selected = False
     elif event == cv2.EVENT_LBUTTONDOWN:
         if prev_was_double_click:
@@ -670,7 +564,8 @@ def mouse_listener(event, x, y, flags, param):
             if point_1[0] is -1:
                 if is_bbox_selected:
                     if is_mouse_inside_delete_button():
-                        edit_bbox('delete')
+                        obj_to_edit = img_objects[selected_bbox]
+                        edit_bbox(obj_to_edit, 'delete')
                     is_bbox_selected = False
                 else:
                     # first click (start drawing a bounding box or delete an item)
@@ -684,10 +579,7 @@ def mouse_listener(event, x, y, flags, param):
 
     elif event == cv2.EVENT_LBUTTONUP:
         if dragBBox.anchor_being_dragged is not None:
-            r = dragBBox.handlerLeftMouseUp(x, y)
-            if r is not None:
-                new_x, new_y, new_w, new_h, index_image_object = r
-                resize_bbox(index_image_object, new_x, new_y, new_x+new_w, new_y+new_h)
+            dragBBox.handlerLeftMouseUp(x, y)
 
 
 
@@ -1102,13 +994,13 @@ while True:
     tmp_img = draw_text(tmp_img, CLASS_LIST[class_index], (mouse_x + 5, mouse_y - 5), color, LINE_THICKNESS)
     img_path = IMAGE_PATH_LIST[img_index]
     annotation_paths = get_annotation_paths(img_path, annotation_formats)
+    if dragBBox.anchor_being_dragged is not None:
+        dragBBox.handlerMouseMove(mouse_x, mouse_y)
     # draw already done bounding boxes
     tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width, height)
     # if bounding box is selected add extra info
     if is_bbox_selected:
         tmp_img = draw_info_bb_selected(tmp_img)
-    if dragBBox.anchor_being_dragged is not None:
-        print("being resized!") # TODO
     # if first click
     if point_1[0] is not -1:
         # draw partial bbox
@@ -1124,67 +1016,69 @@ while True:
     cv2.imshow(WINDOW_NAME, tmp_img)
     pressed_key = cv2.waitKey(DELAY)
 
-    ''' Key Listeners START '''
-    if pressed_key == ord('a') or pressed_key == ord('d'):
-        # show previous image key listener
-        if pressed_key == ord('a'):
-            img_index = decrease_index(img_index, last_img_index)
-        # show next image key listener
-        elif pressed_key == ord('d'):
-            img_index = increase_index(img_index, last_img_index)
-        cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
-    elif pressed_key == ord('s') or pressed_key == ord('w'):
-        # change down current class key listener
-        if pressed_key == ord('s'):
-            class_index = decrease_index(class_index, last_class_index)
-        # change up current class key listener
-        elif pressed_key == ord('w'):
-            class_index = increase_index(class_index, last_class_index)
-        draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
-        cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
-        if is_bbox_selected:
-            edit_bbox('change_class:{}'.format(class_index))
-    # help key listener
-    elif pressed_key == ord('h'):
-        text = ('[e] to show edges;\n'
-                '[q] to quit;\n'
-                '[a] or [d] to change Image;\n'
-                '[w] or [s] to change Class.\n'
-                )
-        display_text(text, 5000)
-    # show edges key listener
-    elif pressed_key == ord('e'):
-        if edges_on == True:
-            edges_on = False
-            display_text('Edges turned OFF!', 1000)
-        else:
-            edges_on = True
-            display_text('Edges turned ON!', 1000)
-    elif pressed_key == ord('p'):
-        # check if the image is a frame from a video
-        is_from_video, video_name = is_frame_from_video(img_path)
-        if is_from_video:
-            # get list of objects associated to that frame
-            object_list = img_objects[:]
-            # remove the objects in that frame that are already in the `.json` file
-            json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
-            file_exists, json_file_data = get_json_file_data(json_file_path)
-            if file_exists:
-                object_list = remove_already_tracked_objects(object_list, img_path, json_file_data)
-            if len(object_list) > 0:
-                # get list of frames following this image
-                next_frame_path_list = get_next_frame_path_list(video_name, img_path)
-                # initial frame
-                init_frame = img.copy()
-                label_tracker = LabelTracker('KCF', init_frame, next_frame_path_list) # TODO: replace 'KCF' by 'CSRT'
-                for obj in object_list:
-                    class_index = obj[0]
-                    color = class_rgb[class_index].tolist()
-                    label_tracker.start_tracker(json_file_data, json_file_path, img_path, obj, color, annotation_formats)
-    # quit key listener
-    elif pressed_key == ord('q'):
-        break
-    ''' Key Listeners END '''
+    if dragBBox.anchor_being_dragged is None:
+        ''' Key Listeners START '''
+        if pressed_key == ord('a') or pressed_key == ord('d'):
+            # show previous image key listener
+            if pressed_key == ord('a'):
+                img_index = decrease_index(img_index, last_img_index)
+            # show next image key listener
+            elif pressed_key == ord('d'):
+                img_index = increase_index(img_index, last_img_index)
+            cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+        elif pressed_key == ord('s') or pressed_key == ord('w'):
+            # change down current class key listener
+            if pressed_key == ord('s'):
+                class_index = decrease_index(class_index, last_class_index)
+            # change up current class key listener
+            elif pressed_key == ord('w'):
+                class_index = increase_index(class_index, last_class_index)
+            draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
+            cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
+            if is_bbox_selected:
+                obj_to_edit = img_objects[selected_bbox]
+                edit_bbox(obj_to_edit, 'change_class:{}'.format(class_index))
+        # help key listener
+        elif pressed_key == ord('h'):
+            text = ('[e] to show edges;\n'
+                    '[q] to quit;\n'
+                    '[a] or [d] to change Image;\n'
+                    '[w] or [s] to change Class.\n'
+                    )
+            display_text(text, 5000)
+        # show edges key listener
+        elif pressed_key == ord('e'):
+            if edges_on == True:
+                edges_on = False
+                display_text('Edges turned OFF!', 1000)
+            else:
+                edges_on = True
+                display_text('Edges turned ON!', 1000)
+        elif pressed_key == ord('p'):
+            # check if the image is a frame from a video
+            is_from_video, video_name = is_frame_from_video(img_path)
+            if is_from_video:
+                # get list of objects associated to that frame
+                object_list = img_objects[:]
+                # remove the objects in that frame that are already in the `.json` file
+                json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
+                file_exists, json_file_data = get_json_file_data(json_file_path)
+                if file_exists:
+                    object_list = remove_already_tracked_objects(object_list, img_path, json_file_data)
+                if len(object_list) > 0:
+                    # get list of frames following this image
+                    next_frame_path_list = get_next_frame_path_list(video_name, img_path)
+                    # initial frame
+                    init_frame = img.copy()
+                    label_tracker = LabelTracker('KCF', init_frame, next_frame_path_list) # TODO: replace 'KCF' by 'CSRT'
+                    for obj in object_list:
+                        class_index = obj[0]
+                        color = class_rgb[class_index].tolist()
+                        label_tracker.start_tracker(json_file_data, json_file_path, img_path, obj, color, annotation_formats)
+        # quit key listener
+        elif pressed_key == ord('q'):
+            break
+        ''' Key Listeners END '''
 
     if WITH_QT:
         # if window gets closed then quit
