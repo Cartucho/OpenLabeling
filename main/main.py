@@ -3,6 +3,7 @@ import argparse
 import glob
 import json
 import os
+import re
 
 import cv2
 import numpy as np
@@ -602,12 +603,9 @@ def draw_info_bb_selected(tmp_img):
     return tmp_img
 
 
-def sort_video_frames(x):
-    # format: [video_name_ext]_[frame number].[image format]
-    # ex: video_sample_0.jpg, video_sample_1.jpg, ...
-    start = x.rfind('_') + 1
-    end = x.rfind('.', start)
-    return int(x[start:end]) # we want to sort by the [frame number]
+def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
+    return [int(text) if text.isdigit() else text.lower()
+            for text in _nsre.split(s)]
 
 
 def convert_video_to_images(video_path, n_frames, desired_img_format):
@@ -881,7 +879,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # load all images and videos (with multiple extensions) from a directory using OpenCV
 IMAGE_PATH_LIST = []
 VIDEO_NAME_DICT = {}
-for f in sorted(os.listdir(INPUT_DIR)):
+for f in sorted(os.listdir(INPUT_DIR), key = natural_sort_key):
     f_path = os.path.join(INPUT_DIR, f)
     if os.path.isdir(f_path):
         # skip directories
@@ -900,7 +898,7 @@ for f in sorted(os.listdir(INPUT_DIR)):
             desired_img_format = '.jpg'
             video_frames_path, video_name_ext = convert_video_to_images(f_path, n_frames, desired_img_format)
             # add video frames to image list
-            frame_list = sorted(os.listdir(video_frames_path), key = sort_video_frames)
+            frame_list = sorted(os.listdir(video_frames_path), key = natural_sort_key)
             ## store information about those frames
             first_index = len(IMAGE_PATH_LIST)
             last_index = first_index + len(frame_list) # exclusive
