@@ -292,12 +292,6 @@ def yolo_to_voc(x_center, y_center, x_width, y_height, width, height):
     return xmin, ymin, xmax, ymax
 
 
-def draw_text(tmp_img, text, center, color, size):
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    cv2.putText(tmp_img, text, center, font, 0.6, color, size, cv2.LINE_AA)
-    return tmp_img
-
-
 def get_xml_object_data(obj):
     class_name = obj.find('name').text
     class_index = CLASS_LIST.index(class_name)
@@ -357,7 +351,8 @@ def draw_bboxes_from_file(tmp_img, annotation_paths, width, height):
             cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
             # draw resizing anchors
             tmp_img = draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color)
-            tmp_img = draw_text(tmp_img, class_name, (xmin, ymin - 5), color, LINE_THICKNESS)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(tmp_img, class_name, (xmin, ymin - 5), font, 0.6, color, LINE_THICKNESS, cv2.LINE_AA)
     return tmp_img
 
 
@@ -874,6 +869,12 @@ class LabelTracker():
             json.dump(json_file_data, outfile, sort_keys=True, indent=4)
 
 
+def complement_bgr(color):
+    lo = min(color)
+    hi = max(color)
+    k = lo + hi
+    return tuple(k - u for u in color)
+
 # change to the directory of this script
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -988,7 +989,14 @@ while True:
     # draw vertical and horizontal guide lines
     draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
     # write selected class
-    tmp_img = draw_text(tmp_img, CLASS_LIST[class_index], (mouse_x + 5, mouse_y - 5), color, LINE_THICKNESS)
+    class_name = CLASS_LIST[class_index]
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.6
+    margin = 3
+    text_width, text_height = cv2.getTextSize(class_name, font, font_scale, LINE_THICKNESS)[0]
+    tmp_img = cv2.rectangle(tmp_img, (mouse_x + LINE_THICKNESS, mouse_y - LINE_THICKNESS), (mouse_x + text_width + margin, mouse_y - text_height - margin), complement_bgr(color), -1)
+    tmp_img = cv2.putText(tmp_img, class_name, (mouse_x + margin, mouse_y - margin), font, font_scale, color, LINE_THICKNESS, cv2.LINE_AA)
+    # get annotation paths
     img_path = IMAGE_PATH_LIST[img_index]
     annotation_paths = get_annotation_paths(img_path, annotation_formats)
     if dragBBox.anchor_being_dragged is not None:
