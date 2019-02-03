@@ -27,6 +27,7 @@ Image labeling in multiple annotation formats:
 
 ## Latest Features
 
+- Jan 2019: easy and quick bounding-boxe's resizing!
 - Jan 2019: video object tracking with OpenCV trackers!
 - TODO: Label photos via Google drive to allow "team online labeling".
 [New Features Discussion](https://github.com/Cartucho/OpenLabeling/issues/3)
@@ -54,10 +55,19 @@ You need to install:
 - [Python](https://www.python.org/downloads/)
 - [OpenCV](https://opencv.org/) version >= 3.0
     1. `python -mpip install -U pip`
-    2. `python -mpip install -U opencv-python`
-- numpy and tqdm:
+    1. `python -mpip install -U opencv-python`
+    1. `python -mpip install -U opencv-contrib-python`
+- numpy, tqdm and lxml:
     1. `python -mpip install -U numpy`
-    2. `python -mpip install -U tqdm`
+    1. `python -mpip install -U tqdm`
+    1. `python -mpip install -U lxml`
+
+Alternatively, you can install everything at once by simply running:
+
+```
+python -mpip install -U pip
+python -mpip install -U -r requirements.txt
+```
 
 ### Run project
 
