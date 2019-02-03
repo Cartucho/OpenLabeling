@@ -2,7 +2,6 @@
 
 
 # New features:
-- Click-drag-resize
 - Auto labeling by using combination between Tracker and Deep Learning Object Detection Model
 
 # How to use
@@ -14,9 +13,6 @@
 - Using `main.py` to manually label with the support of Tracker.
 
 # Plan 
-- Fix some bugs
-- Clean code a bit
-- Improve algorithm a bit
 - Combine with state of the art deep learning tracker
 
 [![GitHub stars](https://img.shields.io/github/stars/Cartucho/OpenLabeling.svg?style=social&label=Stars)](https://github.com/Cartucho/OpenLabeling)

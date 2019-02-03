@@ -1,21 +1,16 @@
 import numpy as np
 import tensorflow as tf
-import resource
-import cv2
-import os
-os.environ['CUDA_VISIBLE_DEVICES'] = ''
-
-resource.RLIMIT_NPROC = 1
-
 
 
 
 
 class ObjectDetector(object):
-    def __init__(self, graph_path):
+    def __init__(self, graph_path, score_threshold, objIds):
         self.detection_graph = self._load_graph(graph_path)
         self.input_tensor, self.tensor_dict = self._get_input_output_tensors(self.detection_graph)
         self.sess = tf.Session(graph=self.detection_graph)
+        self.score_threshold = score_threshold # object score threshold
+        self.objIds = objIds # Only those object Ids can be gotten
 
     def _load_graph(self, graph_path):
         detection_graph = tf.Graph()
@@ -41,7 +36,7 @@ class ObjectDetector(object):
             image_tensor = tf.get_default_graph().get_tensor_by_name('image_tensor:0')
         return image_tensor, tensor_dict
 
-    def _post_process(self, output_dict, im_width, im_height, thres=0.5, catIds=None):
+    def _post_process(self, output_dict, im_width, im_height):
         # all outputs are float32 numpy arrays, so convert types as appropriate
         output_dict['num_detections'] = int(output_dict['num_detections'][0])
         output_dict['detection_classes'] = output_dict['detection_classes'][0].astype(np.uint8)
@@ -51,13 +46,13 @@ class ObjectDetector(object):
         boxes = output_dict["detection_boxes"]
         class_indices = output_dict["detection_classes"]
         scores = output_dict["detection_scores"]
-        mask = scores > thres
+        mask = scores > self.score_threshold
         boxes = boxes[mask, :]
         class_indices = class_indices[mask]
         scores = scores[mask]
         # Only keep classes listed in catIds
-        if catIds is not None:
-            mask = np.isin(class_indices, catIds)
+        if self.objIds is not None:
+            mask = np.isin(class_indices, self.objIds)
             boxes = boxes[mask]
             class_indices = class_indices[mask]
             scores = scores[mask]
@@ -73,56 +68,12 @@ class ObjectDetector(object):
         boxes = new_boxes
         return boxes, scores, class_indices
 
-    def detect(self, im, catIds=None): # Assume the image is in RGB color space
+    def detect(self, im): # Assume the image is in RGB color space
         height, width = im.shape[:2]
         output_dict = self.sess.run(self.tensor_dict,
                             feed_dict={self.input_tensor: np.expand_dims(im, 0)})
         # Post-processing
-        boxes, scores, class_indices = self._post_process(output_dict, width, height,thres=0.5, catIds=catIds)
+        boxes, scores, class_indices = self._post_process(output_dict, width, height)
         return boxes, scores, class_indices
 
 
-
-
-def draw_rectangle(image, boxes):
-    for box  in boxes:
-        x = box[0]
-        y = box[1]
-        w = box[2]
-        h = box[3]
-
-        cv2.rectangle(image, (x,y), (x+w, y+h), (255, 0, 255))
-
-    return image
-
-if __name__ == "__main__":
-    # Init detector
-    graph_model_path = "ssdlite_mobilenet_v2_coco_2018_05_09/frozen_inference_graph.pb"
-    graph_model_path = "faster_rcnn_nas_coco_2018_01_28/frozen_inference_graph.pb"
-    detector = ObjectDetector(graph_path=graph_model_path)
-
-    # Init video capture
-    file = "/home/thede/data/gym_footage/separate_cams/Cam_14.mp4"
-    # file = "/home/thede/Downloads/vtest.avi"
-    cap = cv2.VideoCapture(file)
-
-    # People detector
-    while True:
-        ret, image = cap.read()
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        boxes, scores, classIds = detector.detect(image)
-        print("Boxes:", boxes)
-        print("Scores:", scores)
-        print("ClassIds:", classIds)
-
-        draw_image = draw_rectangle(image.copy(), boxes)
-
-        cv2.imshow("Original Image", image)
-        cv2.imshow("People Detector", draw_image)
-
-        k = cv2.waitKey(0)
-
-        if  k == 27:
-            break
-
-    cv2.destroyAllWindows()
