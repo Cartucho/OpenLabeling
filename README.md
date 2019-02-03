@@ -12,6 +12,7 @@ Image labeling in multiple annotation formats:
 
 ## Latest Features
 
+- Jan 2019: export a package for yolo_darknet training
 - Jan 2019: easy and quick bounding-boxe's resizing!
 - Jan 2019: video object tracking with OpenCV trackers!
 - TODO: Label photos via Google drive to allow "team online labeling".
@@ -70,6 +71,7 @@ Step by step:
           -i, --input               Path to images and videos input folder | Default: input/
           -o, --output              Path to output folder (if using the PASCAL VOC format it's important to set this path correctly) | Default: output/
           -t, --thickness           Bounding box and cross line thickness (int) | Default: -t 1
+          -x, --export_dir          Path to export directory for yolo_darknet training | Default: -x export
 
   5. You can find the annotations in the folder **output/**
 
@@ -83,9 +85,11 @@ Keyboard, press:
 | --- | --- |
 | a/d | previous/next image |
 | s/w | previous/next class |
-| e | edges |
-| h | help |
+| e | show edges |
+| h | show help |
+| p | predict objects in following video frames  |
 | q | quit |
+| x | export a package for yolo_darknet training |
 
 Video:
 

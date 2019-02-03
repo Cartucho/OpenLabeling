@@ -1,9 +1,10 @@
 #!/bin/python
 import argparse
-import glob
+import distutils
 import json
 import os
 import re
+import shutil
 
 import cv2
 import numpy as np
@@ -28,6 +29,7 @@ parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
 parser.add_argument('-o', '--output_dir', default='output', type=str, help='Path to output directory')
 parser.add_argument('-t', '--thickness', default='1', type=int, help='Bounding box and cross line thickness')
+parser.add_argument('-x', '--export_dir', default='export', type=str, help='Path to export directory for yolo_darknet training')
 args = parser.parse_args()
 
 class_index = 0
@@ -37,12 +39,14 @@ img_objects = []
 
 INPUT_DIR = args.input_dir
 OUTPUT_DIR = args.output_dir
+EXPORT_DIR = args.export_dir
 
 WINDOW_NAME = 'OpenLabeling'
 TRACKBAR_IMG = 'Image'
 TRACKBAR_CLASS = 'Class'
 
-annotation_formats = {'PASCAL_VOC' : '.xml', 'YOLO_darknet' : '.txt'}
+YOLO_darknet_format= 'YOLO_darknet'
+annotation_formats = {'PASCAL_VOC' : '.xml', YOLO_darknet_format : '.txt'}
 TRACKER_DIR = os.path.join(OUTPUT_DIR, '.tracker')
 
 # selected bounding box
@@ -403,7 +407,7 @@ def edit_bbox(obj_to_edit, action):
         new_x_right = min(width, int(action.split(':')[3]))
         new_y_bottom = min(height, int(action.split(':')[4]))
 
-    # 1. initialize bboxes_to_edit_dict 
+    # 1. initialize bboxes_to_edit_dict
     #    (we use a dict since a single label can be associated with multiple ones in videos)
     bboxes_to_edit_dict = {}
     current_img_path = IMAGE_PATH_LIST[img_index]
@@ -776,6 +780,27 @@ def json_file_add_object(frame_data_dict, img_path, anchor_id, pred_counter, obj
 
     return frame_data_dict
 
+def copy_dir(source, dest, pattern='*'):
+    '''Copy a directory structure overwriting existing files'''
+    for root, dirs, files in os.walk(source):
+        for file in files:
+            rel_path = root.replace(source, '').lstrip(os.sep)
+            dest_path = os.path.join(dest, rel_path)
+
+            if not os.path.isdir(dest_path):
+                os.makedirs(dest_path)
+
+            # we only want .jpg & .txt files, so
+            if file.endswith('.jpg') or file.endswith('.txt'):
+                shutil.copyfile(os.path.join(root, file), os.path.join(dest_path, file))
+
+def export_yolo_package():
+    '''Export a package ready to be imported for yolo training (.jpgs, .txts & obj.names file'''
+    copy_dir(INPUT_DIR, EXPORT_DIR)
+    copy_dir(os.path.join(OUTPUT_DIR, YOLO_darknet_format), EXPORT_DIR)
+    shutil.copyfile('class_list.txt', os.path.join(EXPORT_DIR, 'obj.names'))
+    display_text('Your export for yolo is complete. You can find it in the export directory.!', 4000)
+    return None
 
 class LabelTracker():
     ''' Special thanks to Rafael Caballero Gonzalez '''
@@ -1041,12 +1066,17 @@ while True:
             if is_bbox_selected:
                 obj_to_edit = img_objects[selected_bbox]
                 edit_bbox(obj_to_edit, 'change_class:{}'.format(class_index))
+        elif pressed_key == ord('x'):
+            export_yolo_package();
         # help key listener
         elif pressed_key == ord('h'):
-            text = ('[e] to show edges;\n'
-                    '[q] to quit;\n'
-                    '[a] or [d] to change Image;\n'
-                    '[w] or [s] to change Class.\n'
+            text = ('[a] / [d] - previous/next image\n'
+                    '[w] / [s] - previous/next class\n'
+                    '[e] - show edges\n'
+                    '[h] - show help (this message)\n'
+                    '[p] - predict objects in following video frames\n'
+                    '[q] - quit\n'
+                    '[x] - export a package of input & output for yolo_darknet training\n'
                     )
             display_text(text, 5000)
         # show edges key listener
