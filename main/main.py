@@ -403,7 +403,7 @@ def edit_bbox(obj_to_edit, action):
         new_x_right = min(width, int(action.split(':')[3]))
         new_y_bottom = min(height, int(action.split(':')[4]))
 
-    # 1. initialize bboxes_to_edit_dict
+    # 1. initialize bboxes_to_edit_dict 
     #    (we use a dict since a single label can be associated with multiple ones in videos)
     bboxes_to_edit_dict = {}
     current_img_path = IMAGE_PATH_LIST[img_index]
