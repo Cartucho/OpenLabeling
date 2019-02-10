@@ -369,6 +369,10 @@ def set_selected_bbox(set_class):
     # if clicked inside multiple bboxes selects the smallest one
     for idx, obj in enumerate(img_objects):
         ind, x1, y1, x2, y2 = obj
+        x1 = x1 - dragBBox.sRA
+        y1 = y1 - dragBBox.sRA
+        x2 = x2 + dragBBox.sRA
+        y2 = y2 + dragBBox.sRA
         if pointInRect(mouse_x, mouse_y, x1, y1, x2, y2):
             is_bbox_selected = True
             tmp_area = get_bbox_area(x1, y1, x2, y2)
@@ -425,7 +429,6 @@ def edit_bbox(obj_to_edit, action):
             # match obj_to_edit with the corresponding json object
             frame_data_dict = json_file_data['frame_data_dict']
             json_object_list = get_json_file_object_list(current_img_path, frame_data_dict)
-            obj_to_edit = img_objects[selected_bbox]
             obj_matched = get_json_object_dict(obj_to_edit, json_object_list)
             # if match found
             if obj_matched is not None:
@@ -557,6 +560,7 @@ def mouse_listener(event, x, y, flags, param):
             if point_1[0] is -1:
                 if is_bbox_selected:
                     if is_mouse_inside_delete_button():
+                        set_selected_bbox(set_class)
                         obj_to_edit = img_objects[selected_bbox]
                         edit_bbox(obj_to_edit, 'delete')
                     is_bbox_selected = False
