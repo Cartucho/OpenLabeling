@@ -44,7 +44,8 @@ OBJECT_IDS = config['OBJECT_DETECTOR_PARAMETERS']['OBJECT_IDS']
 OBJECT_IDS = [int (str) for str in OBJECT_IDS.split(",")]
 
 # Path of object detection
-graph_model_path = "../object_detection/ssdlite_mobilenet_v2_coco_2018_05_09/frozen_inference_graph.pb"
+# graph_model_path = "../object_detection/ssdlite_mobilenet_v2_coco_2018_05_09/frozen_inference_graph.pb"
+graph_model_path = "../object_detection/mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
 
 # Init object detector
 detector = ObjectDetector(graph_path=graph_model_path, score_threshold = OBJECT_SCORE_THRESHOLD,\
@@ -526,9 +527,11 @@ class TrackerManager:
     \brief Init trackers
     '''
     def init_trackers(self, bboxes, classIds, json_file_data,json_file_path, img_path):
+        global img_index
+
         anchor_id = json_file_data['n_anchor_ids']
         frame_data_dict = json_file_data['frame_data_dict']
-
+        image = cv2.imread(img_path)
         for box, classId in zip(bboxes, classIds):
             # Init trackers with those classId and anchorId
             anchor_id = anchor_id + 1
@@ -548,6 +551,17 @@ class TrackerManager:
             # Save prediction
             annotation_paths = get_annotation_paths(img_path, annotation_formats)
             save_bounding_box(annotation_paths, int(classId), (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
+
+
+
+            #Draw
+            color = class_rgb[int(tracker.classId)].tolist()
+            cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
+
+        img_index = increase_index(img_index, last_img_index)
+        cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+        cv2.imshow(WINDOW_NAME, image)
+        pressed_key = cv2.waitKey(DELAY)
 
         json_file_data.update({'n_anchor_ids': (anchor_id + 1)})
 
@@ -585,20 +599,23 @@ class TrackerManager:
                     xmax = xmin + w
                     ymax = ymin + h
                     obj = [int(tracker.classId), xmin, ymin, xmax, ymax]
-                    frame_data_dict = json_file_add_object(frame_data_dict, frame_path, anchor_id, pred_counter, obj)
+                    frame_data_dict = json_file_add_object(frame_data_dict, frame_path, int(tracker.anchorId), pred_counter, obj)
 
+                    color = class_rgb[int(tracker.classId)].tolist()
                     cv2.rectangle(next_image, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
 
                     # save prediction
                     annotation_paths = get_annotation_paths(frame_path, annotation_formats)
                     save_bounding_box(annotation_paths, int(tracker.classId), (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
 
-                    img_index = increase_index(img_index, last_img_index)
-                    cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
 
-                    cv2.imshow(WINDOW_NAME, next_image)
-                    pressed_key = cv2.waitKey(DELAY)
 
+                cv2.imshow(WINDOW_NAME, next_image)
+                pressed_key = cv2.waitKey(DELAY)
+
+                img_index = increase_index(img_index, last_img_index)
+
+                cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
             # If there is "miss" traker, then break Tracker Manager.
             # Note:Ready to use "Object Detection" to detect object
             else:
@@ -752,7 +769,8 @@ while True:
     boxes, confidences, classIds =  detector.detect(im_rgb)
 
     if not len(boxes):
-        print(img_index)
+        cv2.imshow(WINDOW_NAME, tmp_img)
+        pressed_key = cv2.waitKey(DELAY)
         img_index = increase_index(img_index, last_img_index)
         cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
 
@@ -777,11 +795,17 @@ while True:
                 save_bounding_box(annotation_paths, classId, (int(box[0]), int(box[1])),
                                   (int(box[0]) + int(box[2]), int(box[1]) + int(box[3])), width, height)
 
+                xmin, ymin, w, h = map(int, box)
+                xmax = xmin + w
+                ymax = ymin + h
+                color = class_rgb[int(classId)].tolist()
+                cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
+
             img_index = increase_index(img_index, last_img_index)
             cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
 
-    cv2.imshow(WINDOW_NAME, tmp_img)
-    pressed_key = cv2.waitKey(DELAY)
+            cv2.imshow(WINDOW_NAME, tmp_img)
+            pressed_key = cv2.waitKey(DELAY)
 
 
 
