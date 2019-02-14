@@ -5,12 +5,16 @@
 - Auto labeling by using combination between Tracker and Deep Learning Object Detection Model
 
 # How to use
-- Put the video files into `input` directory
-- Download deep learning model from https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
-  and put it into `object_detection` directory. 
-  **Note**: Default model used in `main_auto.py` is `ssdlite_mobilenet_v2_coco_2018_05_09`
+- Download one or some deep learning models from https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
+  and put it into `object_detection` directory. The outline of `object_detection` looks like that:
+  + `tf_object_detection.py`
+  + `utils.py`
+  + `ssdlite_mobilenet_v2_coco_2018_05_05` . This is the model download from the link above 
+  + Or `mask_rcnn_inception_v2_coco_2018_01_28`. This model is more accurate than the first one
+  
+  **Note**: Default model used in `main_auto.py` is `mask_rcnn_inception_v2_coco_2018_01_28`. We can
+  set `graph_model_path` in file `main_auto.py` to change the pretrain model
 - Using `main_auto.py` to automatically label data first
-- Using `main.py` to manually label with the support of Tracker.
 
 # Plan 
 - Combine with state of the art deep learning tracker
