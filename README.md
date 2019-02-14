@@ -9,8 +9,8 @@
   and put it into `object_detection` directory. The outline of `object_detection` looks like that:
   + `tf_object_detection.py`
   + `utils.py`
-  + `ssdlite_mobilenet_v2_coco_2018_05_05` . This is the model download from the link above 
-  + Or `mask_rcnn_inception_v2_coco_2018_01_28`. This model is more accurate than the first one
+  + `ssdlite_mobilenet_v2_coco_2018_05_09` . Download by clicking this link http://download.tensorflow.org/models/object_detection/ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz
+  + Or `mask_rcnn_inception_v2_coco_2018_01_28`. Download by clicking this link http://download.tensorflow.org/models/object_detection/mask_rcnn_inception_v2_coco_2018_01_28.tar.gz
   
   **Note**: Default model used in `main_auto.py` is `mask_rcnn_inception_v2_coco_2018_01_28`. We can
   set `graph_model_path` in file `main_auto.py` to change the pretrain model
