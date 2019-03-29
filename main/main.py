@@ -569,7 +569,7 @@ def mouse_listener(event, x, y, flags, param):
                     point_1 = (x, y)
             else:
                 # minimal size for bounding box to avoid errors
-                threshold = 20
+                threshold = 10
                 if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
                     # second click
                     point_2 = (x, y)
