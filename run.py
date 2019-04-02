@@ -5,7 +5,6 @@ import os
 
 import numpy as np
 import cv2
-import sys
 
 
 WITH_QT = True
@@ -137,8 +136,8 @@ def yolo_to_x_y(x_center, y_center, x_width, y_height, width, height):
 
 def draw_text(tmp_img, text, center, color, size):
     font = cv2.FONT_HERSHEY_SIMPLEX
-#     cv2.putText(tmp_img, text, center, font, 0.4, color, size, cv2.LINE_AA)
-    cv2.putText(tmp_img, text, center, font, 0.4, color, size, 0)
+    cv2.putText(tmp_img, text, center, font, 0.6, color, size, cv2.LINE_AA)
+
     return tmp_img
 
 def draw_bboxes_from_file(tmp_img, txt_path, width, height):
@@ -171,9 +170,7 @@ def draw_bboxes_from_file(tmp_img, txt_path, width, height):
             img_objects.append([class_index, x1, y1, x2, y2])
             color = class_rgb[class_index].tolist()
             cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, thickness=args.bbox_thickness)
-            #cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, thickness=2)
-#             tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color, args.bbox_thickness)
-            tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 2), color, args.bbox_thickness)
+            tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color, args.bbox_thickness)
             
             
     return tmp_img
@@ -319,7 +316,7 @@ def is_mouse_inside_points(x1, y1, x2, y2):
 def get_close_icon(x1, y1, x2, y2):
     percentage = 0.05
     height = -1
-    while height < 5 and percentage < 1.0:
+    while height < 15 and percentage < 1.0:
         height = int((y2 - y1) * percentage)
         percentage += 0.1
     return (x2 - height), y1, x2, (y1 + height)
@@ -329,8 +326,8 @@ def draw_close_icon(tmp_img, x1_c, y1_c, x2_c, y2_c):
     red = (0,0,255)
     cv2.rectangle(tmp_img, (x1_c + 1, y1_c - 1), (x2_c, y2_c), red, -1)
     white = (255, 255, 255)
-    cv2.line(tmp_img, (x1_c, y1_c), (x2_c, y2_c), white, 1)
-    cv2.line(tmp_img, (x1_c, y2_c), (x2_c, y1_c), white, 1)
+    cv2.line(tmp_img, (x1_c, y1_c), (x2_c, y2_c), white, 2)
+    cv2.line(tmp_img, (x1_c, y2_c), (x2_c, y1_c), white, 2)
     return tmp_img
 
 
@@ -544,6 +541,7 @@ while True:
         cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
     
     # help key listener
+    # changed h to m because of conflict with moving keys
     elif pressed_key == ord('m'):
         if WITH_QT:
             cv2.displayOverlay(WINDOW_NAME, "[e] to show edges;\n"
