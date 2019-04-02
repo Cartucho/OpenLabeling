@@ -5,6 +5,7 @@ import os
 
 import numpy as np
 import cv2
+import sys
 
 
 WITH_QT = True
@@ -136,7 +137,8 @@ def yolo_to_x_y(x_center, y_center, x_width, y_height, width, height):
 
 def draw_text(tmp_img, text, center, color, size):
     font = cv2.FONT_HERSHEY_SIMPLEX
-    cv2.putText(tmp_img, text, center, font, 0.6, color, size, cv2.LINE_AA)
+#     cv2.putText(tmp_img, text, center, font, 0.4, color, size, cv2.LINE_AA)
+    cv2.putText(tmp_img, text, center, font, 0.4, color, size, 0)
     return tmp_img
 
 def draw_bboxes_from_file(tmp_img, txt_path, width, height):
@@ -169,7 +171,11 @@ def draw_bboxes_from_file(tmp_img, txt_path, width, height):
             img_objects.append([class_index, x1, y1, x2, y2])
             color = class_rgb[class_index].tolist()
             cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, thickness=args.bbox_thickness)
-            tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color, args.bbox_thickness)
+            #cv2.rectangle(tmp_img, (x1, y1), (x2, y2), color, thickness=2)
+#             tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 5), color, args.bbox_thickness)
+            tmp_img = draw_text(tmp_img, class_list[class_index], (x1, y1 - 2), color, args.bbox_thickness)
+            
+            
     return tmp_img
 
 
@@ -222,6 +228,39 @@ def delete_selected_bbox():
     new_file.close()
     print('deleted')
     
+def move_selected_bbox(left, right, up, down, width, height):
+    global class_index
+    img_path = image_list[img_index]
+    txt_path = get_txt_path(img_path)
+    is_bbox_selected = False
+
+    with open(txt_path, "r") as old_file:
+        lines = old_file.readlines()
+
+    with open(txt_path, "w") as new_file:
+        counter = 0
+        for line in lines:
+            if counter != selected_bbox:
+                new_file.write(line)
+            else:
+                
+                values_str = line.split()
+                class_index = int(values_str[0])
+                x_center, y_center, x_width, y_height = map(float, values_str[1:5])
+                x1,y1,x2,y2 = yolo_to_x_y(x_center, y_center, x_width, y_height, width, height)
+                x1 += left
+                y1 += up
+                x2 += right
+                y2 += down
+                x_center = ((x1 + x2)/2)/width
+                y_center = ((y1 + y2)/2)/height
+                x_width = (x2 - x1)/width
+                y_height = (y2 - y1)/height
+                line = map(str, [class_index, x_center, y_center, x_width, y_height])
+                line = " ".join(line)+'\n'
+                new_file.write(line)
+            counter += 1
+    new_file.close()    
         
 # mouse callback function
 def mouse_listener(event, x, y, flags, param):
@@ -280,7 +319,7 @@ def is_mouse_inside_points(x1, y1, x2, y2):
 def get_close_icon(x1, y1, x2, y2):
     percentage = 0.05
     height = -1
-    while height < 15 and percentage < 1.0:
+    while height < 5 and percentage < 1.0:
         height = int((y2 - y1) * percentage)
         percentage += 0.1
     return (x2 - height), y1, x2, (y1 + height)
@@ -290,8 +329,8 @@ def draw_close_icon(tmp_img, x1_c, y1_c, x2_c, y2_c):
     red = (0,0,255)
     cv2.rectangle(tmp_img, (x1_c + 1, y1_c - 1), (x2_c, y2_c), red, -1)
     white = (255, 255, 255)
-    cv2.line(tmp_img, (x1_c, y1_c), (x2_c, y2_c), white, 2)
-    cv2.line(tmp_img, (x1_c, y2_c), (x2_c, y1_c), white, 2)
+    cv2.line(tmp_img, (x1_c, y1_c), (x2_c, y2_c), white, 1)
+    cv2.line(tmp_img, (x1_c, y2_c), (x2_c, y1_c), white, 1)
     return tmp_img
 
 
@@ -326,8 +365,31 @@ def change_selected_bbox(c, last_class_index):
                 new_cat = str(new_cat)
                 new_file.write(" ".join([new_cat,' '.join(split[1:])])+'\n')
             counter += 1
-			
 
+def index_selected_bbox(c, last_class_index):
+    img_path = image_list[img_index]
+    txt_path = get_txt_path(img_path)
+    is_bbox_selected = True
+
+    with open(txt_path, "r") as old_file:
+        lines = old_file.readlines()
+
+    with open(txt_path, "w") as new_file:
+        counter = 0
+        for line in lines:
+            if counter != selected_bbox:
+                new_file.write(line)
+            else:
+                split = line.split()
+                new_cat  = c
+                if new_cat > last_class_index:
+                    new_cat = 0
+                elif new_cat <0:
+                    new_cat = last_class_index
+                new_cat = str(new_cat)
+                new_file.write(" ".join([new_cat,' '.join(split[1:])])+'\n')
+            counter += 1
+			
 
 # load all images (with multiple extensions) from a directory using OpenCV
 img_dir = "images/"
@@ -386,7 +448,7 @@ cv2.createTrackbar(TRACKBAR_IMG, WINDOW_NAME, 0, last_img_index, change_img_inde
 # selected class
 TRACKBAR_CLASS = 'Class'
 if last_class_index != 0:
-  cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, change_class_index)
+    cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, change_class_index)
 
 # initialize
 change_img_index(0)
@@ -447,6 +509,20 @@ while True:
         elif pressed_key == ord('d'):
             img_index = increase_index(img_index, last_img_index)
         cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+    elif pressed_key in [ord('0'), ord('1'), ord('2'), ord('3'), ord('4'), ord('5'), ord('6'), ord('7'), ord('8'), ord('9')]:
+        if is_bbox_selected:
+            index_selected_bbox(int(chr(pressed_key)), last_class_index)
+            color = class_rgb[class_index].tolist()
+            draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
+            cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
+            
+    elif pressed_key == ord('y'):
+        if is_bbox_selected:
+            delete_selected_bbox()
+            
+            color = class_rgb[class_index].tolist()
+            draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
+            cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
     elif pressed_key == ord('s') or pressed_key == ord('w'):
         if is_bbox_selected:
             if pressed_key == ord('s'):
@@ -455,6 +531,7 @@ while True:
             if pressed_key == ord('w'):
                 #decrease label of the selected box
                 change_selected_bbox(1, last_class_index)
+            
         else:
             if pressed_key == ord('s'):
                 # change down current class key listener
@@ -467,7 +544,7 @@ while True:
         cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
     
     # help key listener
-    elif pressed_key == ord('h'):
+    elif pressed_key == ord('m'):
         if WITH_QT:
             cv2.displayOverlay(WINDOW_NAME, "[e] to show edges;\n"
                                 "[q] to quit;\n"
@@ -495,10 +572,29 @@ while True:
             else:
                 print("Edges turned ON!")
             
+    elif pressed_key == 0:
+        selected_bbox +=1
+        if selected_bbox > len(img_objects):
+            selected_bbox = 0
+    
+    elif pressed_key in [ord('f'), ord('g'), ord('h'), ord('t')]:
+        if pressed_key == ord('f'):
+            move_selected_bbox(-1,-1,0,0, width, height)
+        elif pressed_key == ord('h'):
+            move_selected_bbox(1,1,0,0, width, height)
+        elif pressed_key == ord('t'):
+            move_selected_bbox(0,0,-1,-1, width, height)
+        elif pressed_key == ord('g'):
+            move_selected_bbox(0,0,1,1, width, height)
+            
+        color = class_rgb[class_index].tolist()
+        draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
+        cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
     
     # quit key listener
     elif pressed_key == ord('q'):
         break
+    
     
     """ Key Listeners END """
     if WITH_QT:
