@@ -1,3 +1,4 @@
+*.pyc
 .idea/
 venv/
 main/input/video_mp4
