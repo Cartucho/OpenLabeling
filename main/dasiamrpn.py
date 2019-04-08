@@ -1,3 +1,10 @@
+"""
+Author : Will Stone
+Date   : 190407
+Desc   : Wrapper class for the DaSiamRPN tracking method. This class has the
+         methods required to interface with the tracking class implemented
+         in main.py within the OpenLabeling package.
+"""
 import torch
 import numpy as np
 from os.path import realpath, dirname, join
@@ -40,6 +47,12 @@ class dasiamrpn(object):
         return True, bbox
 
     def bbox_to_pos(self, initial_bbox):
+        """
+        Convert bounding box format from a tuple format containing
+        xmin, ymin, width, and height to a tuple of two arrays which contain
+        the x and y coordinates of the center of the box and its width and
+        height respectively.
+        """
         xmin, ymin, w, h = initial_bbox
         cx = int(xmin + w/2)
         cy = int(ymin + h/2)
@@ -49,6 +62,10 @@ class dasiamrpn(object):
         return target_pos, target_sz
 
     def pos_to_bbox(self, target_pos, target_sz):
+        """
+        Invert the bounding box format produced in the above conversion
+        function.
+        """
         w = target_sz[0]
         h = target_sz[1]
         xmin = int(target_pos[0] - w/2)
