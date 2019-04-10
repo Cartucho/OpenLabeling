@@ -1032,6 +1032,7 @@ while True:
             # show next image key listener
             elif pressed_key == ord('d'):
                 img_index = increase_index(img_index, last_img_index)
+            set_img_index(img_index)
             cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
         elif pressed_key == ord('s') or pressed_key == ord('w'):
             # change down current class key listener
@@ -1041,6 +1042,7 @@ while True:
             elif pressed_key == ord('w'):
                 class_index = increase_index(class_index, last_class_index)
             draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
+            set_class_index(class_index)
             cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
             if is_bbox_selected:
                 obj_to_edit = img_objects[selected_bbox]
