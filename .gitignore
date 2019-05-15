@@ -2,4 +2,4 @@
 venv/
 main/input/people_walking_mp4
 main/output
-models/
+object_detection/models
