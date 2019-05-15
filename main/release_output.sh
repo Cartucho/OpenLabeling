@@ -4,4 +4,4 @@ rm -rf output/.tracker/*
 rm -rf output/PASCAL_VOC/*
 rm -rf output/YOLO_darknet/*
 
-echo "Finish removing all outputs"
+echo "Finished removing all the outputs"
