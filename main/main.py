@@ -888,216 +888,219 @@ def complement_bgr(color):
 # change to the directory of this script
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-# load all images and videos (with multiple extensions) from a directory using OpenCV
-IMAGE_PATH_LIST = []
-VIDEO_NAME_DICT = {}
-for f in sorted(os.listdir(INPUT_DIR), key = natural_sort_key):
-    f_path = os.path.join(INPUT_DIR, f)
-    if os.path.isdir(f_path):
-        # skip directories
-        continue
-    # check if it is an image
-    test_img = cv2.imread(f_path)
-    if test_img is not None:
-        IMAGE_PATH_LIST.append(f_path)
-    else:
-        # test if it is a video
-        test_video_cap = cv2.VideoCapture(f_path)
-        n_frames = int(test_video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        test_video_cap.release()
-        if n_frames > 0:
-            # it is a video
-            desired_img_format = '.jpg'
-            video_frames_path, video_name_ext = convert_video_to_images(f_path, n_frames, desired_img_format)
-            # add video frames to image list
-            frame_list = sorted(os.listdir(video_frames_path), key = natural_sort_key)
-            ## store information about those frames
-            first_index = len(IMAGE_PATH_LIST)
-            last_index = first_index + len(frame_list) # exclusive
-            indexes_dict = {}
-            indexes_dict['first_index'] = first_index
-            indexes_dict['last_index'] = last_index
-            VIDEO_NAME_DICT[video_name_ext] = indexes_dict
-            IMAGE_PATH_LIST.extend((os.path.join(video_frames_path, frame) for frame in frame_list))
-last_img_index = len(IMAGE_PATH_LIST) - 1
+if __name__ == '__main__':
+    # load all images and videos (with multiple extensions) from a directory using OpenCV
+    IMAGE_PATH_LIST = []
+    VIDEO_NAME_DICT = {}
+    for f in sorted(os.listdir(INPUT_DIR), key = natural_sort_key):
+        f_path = os.path.join(INPUT_DIR, f)
+        if os.path.isdir(f_path):
+            # skip directories
+            continue
+        # check if it is an image
+        test_img = cv2.imread(f_path)
+        if test_img is not None:
+            IMAGE_PATH_LIST.append(f_path)
+        else:
+            # test if it is a video
+            test_video_cap = cv2.VideoCapture(f_path)
+            n_frames = int(test_video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            test_video_cap.release()
+            if n_frames > 0:
+                # it is a video
+                desired_img_format = '.jpg'
+                video_frames_path, video_name_ext = convert_video_to_images(f_path, n_frames, desired_img_format)
+                # add video frames to image list
+                frame_list = sorted(os.listdir(video_frames_path), key = natural_sort_key)
+                ## store information about those frames
+                first_index = len(IMAGE_PATH_LIST)
+                last_index = first_index + len(frame_list) # exclusive
+                indexes_dict = {}
+                indexes_dict['first_index'] = first_index
+                indexes_dict['last_index'] = last_index
+                VIDEO_NAME_DICT[video_name_ext] = indexes_dict
+                IMAGE_PATH_LIST.extend((os.path.join(video_frames_path, frame) for frame in frame_list))
+    last_img_index = len(IMAGE_PATH_LIST) - 1
 
-# create output directories
-if len(VIDEO_NAME_DICT) > 0:
-    if not os.path.exists(TRACKER_DIR):
-        os.makedirs(TRACKER_DIR)
-for ann_dir in annotation_formats:
-    new_dir = os.path.join(OUTPUT_DIR, ann_dir)
-    if not os.path.exists(new_dir):
-        os.makedirs(new_dir)
-    for video_name_ext in VIDEO_NAME_DICT:
-        new_video_dir = os.path.join(new_dir, video_name_ext)
-        if not os.path.exists(new_video_dir):
-            os.makedirs(new_video_dir)
+    # create output directories
+    if len(VIDEO_NAME_DICT) > 0:
+        if not os.path.exists(TRACKER_DIR):
+            os.makedirs(TRACKER_DIR)
+    for ann_dir in annotation_formats:
+        new_dir = os.path.join(OUTPUT_DIR, ann_dir)
+        if not os.path.exists(new_dir):
+            os.makedirs(new_dir)
+        for video_name_ext in VIDEO_NAME_DICT:
+            new_video_dir = os.path.join(new_dir, video_name_ext)
+            if not os.path.exists(new_video_dir):
+                os.makedirs(new_video_dir)
 
-# create empty annotation files for each image, if it doesn't exist already
-for img_path in IMAGE_PATH_LIST:
-    # image info for the .xml file
-    test_img = cv2.imread(img_path)
-    abs_path = os.path.abspath(img_path)
-    folder_name = os.path.dirname(img_path)
-    image_name = os.path.basename(img_path)
-    img_height, img_width, depth = (str(number) for number in test_img.shape)
+    # create empty annotation files for each image, if it doesn't exist already
+    for img_path in IMAGE_PATH_LIST:
+        # image info for the .xml file
+        test_img = cv2.imread(img_path)
+        abs_path = os.path.abspath(img_path)
+        folder_name = os.path.dirname(img_path)
+        image_name = os.path.basename(img_path)
+        img_height, img_width, depth = (str(number) for number in test_img.shape)
 
-    for ann_path in get_annotation_paths(img_path, annotation_formats):
-        if not os.path.isfile(ann_path):
-            if '.txt' in ann_path:
-                open(ann_path, 'a').close()
-            elif '.xml' in ann_path:
-                create_PASCAL_VOC_xml(ann_path, abs_path, folder_name, image_name, img_height, img_width, depth)
+        for ann_path in get_annotation_paths(img_path, annotation_formats):
+            if not os.path.isfile(ann_path):
+                if '.txt' in ann_path:
+                    open(ann_path, 'a').close()
+                elif '.xml' in ann_path:
+                    create_PASCAL_VOC_xml(ann_path, abs_path, folder_name, image_name, img_height, img_width, depth)
 
-# load class list
-with open('class_list.txt') as f:
-    CLASS_LIST = list(nonblank_lines(f))
-#print(CLASS_LIST)
-last_class_index = len(CLASS_LIST) - 1
+    # load class list
+    with open('class_list.txt') as f:
+        CLASS_LIST = list(nonblank_lines(f))
+    #print(CLASS_LIST)
+    last_class_index = len(CLASS_LIST) - 1
 
-# Make the class colors the same each session
-# The colors are in BGR order because we're using OpenCV
-class_rgb = [
-    (0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (0, 255, 255),
-    (255, 0, 255), (192, 192, 192), (128, 128, 128), (128, 0, 0),
-    (128, 128, 0), (0, 128, 0), (128, 0, 128), (0, 128, 128), (0, 0, 128)]
-class_rgb = np.array(class_rgb)
-# If there are still more classes, add new colors randomly
-num_colors_missing = len(CLASS_LIST) - len(class_rgb)
-if num_colors_missing > 0:
-    more_colors = np.random.randint(0, 255+1, size=(num_colors_missing, 3))
-    class_rgb = np.vstack([class_rgb, more_colors])
+    # Make the class colors the same each session
+    # The colors are in BGR order because we're using OpenCV
+    class_rgb = [
+        (0, 0, 255), (255, 0, 0), (0, 255, 0), (255, 255, 0), (0, 255, 255),
+        (255, 0, 255), (192, 192, 192), (128, 128, 128), (128, 0, 0),
+        (128, 128, 0), (0, 128, 0), (128, 0, 128), (0, 128, 128), (0, 0, 128)]
+    class_rgb = np.array(class_rgb)
+    # If there are still more classes, add new colors randomly
+    num_colors_missing = len(CLASS_LIST) - len(class_rgb)
+    if num_colors_missing > 0:
+        more_colors = np.random.randint(0, 255+1, size=(num_colors_missing, 3))
+        class_rgb = np.vstack([class_rgb, more_colors])
 
-# create window
-cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_KEEPRATIO)
-cv2.resizeWindow(WINDOW_NAME, 1000, 700)
-cv2.setMouseCallback(WINDOW_NAME, mouse_listener)
+    # create window
+    cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_KEEPRATIO)
+    cv2.resizeWindow(WINDOW_NAME, 1000, 700)
+    cv2.setMouseCallback(WINDOW_NAME, mouse_listener)
 
-# selected image
-cv2.createTrackbar(TRACKBAR_IMG, WINDOW_NAME, 0, last_img_index, set_img_index)
+    # selected image
+    cv2.createTrackbar(TRACKBAR_IMG, WINDOW_NAME, 0, last_img_index, set_img_index)
 
-# selected class
-if last_class_index != 0:
-    cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, set_class_index)
+    # selected class
+    if last_class_index != 0:
+        cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, set_class_index)
 
-# initialize
-set_img_index(0)
-edges_on = False
+    # initialize
+    set_img_index(0)
+    edges_on = False
 
-display_text('Welcome!\n Press [h] for help.', 4000)
+    display_text('Welcome!\n Press [h] for help.', 4000)
 
-# loop
-while True:
-    color = class_rgb[class_index].tolist()
-    # clone the img
-    tmp_img = img.copy()
-    height, width = tmp_img.shape[:2]
-    if edges_on == True:
-        # draw edges
-        tmp_img = draw_edges(tmp_img)
-    # draw vertical and horizontal guide lines
-    draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
-    # write selected class
-    class_name = CLASS_LIST[class_index]
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.6
-    margin = 3
-    text_width, text_height = cv2.getTextSize(class_name, font, font_scale, LINE_THICKNESS)[0]
-    tmp_img = cv2.rectangle(tmp_img, (mouse_x + LINE_THICKNESS, mouse_y - LINE_THICKNESS), (mouse_x + text_width + margin, mouse_y - text_height - margin), complement_bgr(color), -1)
-    tmp_img = cv2.putText(tmp_img, class_name, (mouse_x + margin, mouse_y - margin), font, font_scale, color, LINE_THICKNESS, cv2.LINE_AA)
-    # get annotation paths
-    img_path = IMAGE_PATH_LIST[img_index]
-    annotation_paths = get_annotation_paths(img_path, annotation_formats)
-    if dragBBox.anchor_being_dragged is not None:
-        dragBBox.handler_mouse_move(mouse_x, mouse_y)
-    # draw already done bounding boxes
-    tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width, height)
-    # if bounding box is selected add extra info
-    if is_bbox_selected:
-        tmp_img = draw_info_bb_selected(tmp_img)
-    # if first click
-    if point_1[0] is not -1:
-        # draw partial bbox
-        cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, LINE_THICKNESS)
-        # if second click
-        if point_2[0] is not -1:
-            # save the bounding box
-            save_bounding_box(annotation_paths, class_index, point_1, point_2, width, height)
-            # reset the points
-            point_1 = (-1, -1)
-            point_2 = (-1, -1)
+    # loop
+    while True:
+        color = class_rgb[class_index].tolist()
+        # clone the img
+        tmp_img = img.copy()
+        height, width = tmp_img.shape[:2]
+        if edges_on == True:
+            # draw edges
+            tmp_img = draw_edges(tmp_img)
+        # draw vertical and horizontal guide lines
+        draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
+        # write selected class
+        class_name = CLASS_LIST[class_index]
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.6
+        margin = 3
+        text_width, text_height = cv2.getTextSize(class_name, font, font_scale, LINE_THICKNESS)[0]
+        tmp_img = cv2.rectangle(tmp_img, (mouse_x + LINE_THICKNESS, mouse_y - LINE_THICKNESS), (mouse_x + text_width + margin, mouse_y - text_height - margin), complement_bgr(color), -1)
+        tmp_img = cv2.putText(tmp_img, class_name, (mouse_x + margin, mouse_y - margin), font, font_scale, color, LINE_THICKNESS, cv2.LINE_AA)
+        # get annotation paths
+        img_path = IMAGE_PATH_LIST[img_index]
+        annotation_paths = get_annotation_paths(img_path, annotation_formats)
+        if dragBBox.anchor_being_dragged is not None:
+            dragBBox.handler_mouse_move(mouse_x, mouse_y)
+        # draw already done bounding boxes
+        tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width, height)
+        # if bounding box is selected add extra info
+        if is_bbox_selected:
+            tmp_img = draw_info_bb_selected(tmp_img)
+        # if first click
+        if point_1[0] is not -1:
+            # draw partial bbox
+            cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, LINE_THICKNESS)
+            # if second click
+            if point_2[0] is not -1:
+                # save the bounding box
+                save_bounding_box(annotation_paths, class_index, point_1, point_2, width, height)
+                # reset the points
+                point_1 = (-1, -1)
+                point_2 = (-1, -1)
 
-    cv2.imshow(WINDOW_NAME, tmp_img)
-    pressed_key = cv2.waitKey(DELAY)
+        cv2.imshow(WINDOW_NAME, tmp_img)
+        pressed_key = cv2.waitKey(DELAY)
 
-    if dragBBox.anchor_being_dragged is None:
-        ''' Key Listeners START '''
-        if pressed_key == ord('a') or pressed_key == ord('d'):
-            # show previous image key listener
-            if pressed_key == ord('a'):
-                img_index = decrease_index(img_index, last_img_index)
-            # show next image key listener
-            elif pressed_key == ord('d'):
-                img_index = increase_index(img_index, last_img_index)
-            cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
-        elif pressed_key == ord('s') or pressed_key == ord('w'):
-            # change down current class key listener
-            if pressed_key == ord('s'):
-                class_index = decrease_index(class_index, last_class_index)
-            # change up current class key listener
-            elif pressed_key == ord('w'):
-                class_index = increase_index(class_index, last_class_index)
-            draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
-            cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
-            if is_bbox_selected:
-                obj_to_edit = img_objects[selected_bbox]
-                edit_bbox(obj_to_edit, 'change_class:{}'.format(class_index))
-        # help key listener
-        elif pressed_key == ord('h'):
-            text = ('[e] to show edges;\n'
-                    '[q] to quit;\n'
-                    '[a] or [d] to change Image;\n'
-                    '[w] or [s] to change Class.\n'
-                    )
-            display_text(text, 5000)
-        # show edges key listener
-        elif pressed_key == ord('e'):
-            if edges_on == True:
-                edges_on = False
-                display_text('Edges turned OFF!', 1000)
-            else:
-                edges_on = True
-                display_text('Edges turned ON!', 1000)
-        elif pressed_key == ord('p'):
-            # check if the image is a frame from a video
-            is_from_video, video_name = is_frame_from_video(img_path)
-            if is_from_video:
-                # get list of objects associated to that frame
-                object_list = img_objects[:]
-                # remove the objects in that frame that are already in the `.json` file
-                json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
-                file_exists, json_file_data = get_json_file_data(json_file_path)
-                if file_exists:
-                    object_list = remove_already_tracked_objects(object_list, img_path, json_file_data)
-                if len(object_list) > 0:
-                    # get list of frames following this image
-                    next_frame_path_list = get_next_frame_path_list(video_name, img_path)
-                    # initial frame
-                    init_frame = img.copy()
-                    label_tracker = LabelTracker('DASIAMRPN', init_frame, next_frame_path_list) # TODO: replace 'KCF' by 'CSRT'
-                    for obj in object_list:
-                        class_index = obj[0]
-                        color = class_rgb[class_index].tolist()
-                        label_tracker.start_tracker(json_file_data, json_file_path, img_path, obj, color, annotation_formats)
-        # quit key listener
-        elif pressed_key == ord('q'):
-            break
-        ''' Key Listeners END '''
+        if dragBBox.anchor_being_dragged is None:
+            ''' Key Listeners START '''
+            if pressed_key == ord('a') or pressed_key == ord('d'):
+                # show previous image key listener
+                if pressed_key == ord('a'):
+                    img_index = decrease_index(img_index, last_img_index)
+                # show next image key listener
+                elif pressed_key == ord('d'):
+                    img_index = increase_index(img_index, last_img_index)
+                set_img_index(img_index)
+                cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+            elif pressed_key == ord('s') or pressed_key == ord('w'):
+                # change down current class key listener
+                if pressed_key == ord('s'):
+                    class_index = decrease_index(class_index, last_class_index)
+                # change up current class key listener
+                elif pressed_key == ord('w'):
+                    class_index = increase_index(class_index, last_class_index)
+                draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
+                set_class_index(class_index)
+                cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
+                if is_bbox_selected:
+                    obj_to_edit = img_objects[selected_bbox]
+                    edit_bbox(obj_to_edit, 'change_class:{}'.format(class_index))
+            # help key listener
+            elif pressed_key == ord('h'):
+                text = ('[e] to show edges;\n'
+                        '[q] to quit;\n'
+                        '[a] or [d] to change Image;\n'
+                        '[w] or [s] to change Class.\n'
+                        )
+                display_text(text, 5000)
+            # show edges key listener
+            elif pressed_key == ord('e'):
+                if edges_on == True:
+                    edges_on = False
+                    display_text('Edges turned OFF!', 1000)
+                else:
+                    edges_on = True
+                    display_text('Edges turned ON!', 1000)
+            elif pressed_key == ord('p'):
+                # check if the image is a frame from a video
+                is_from_video, video_name = is_frame_from_video(img_path)
+                if is_from_video:
+                    # get list of objects associated to that frame
+                    object_list = img_objects[:]
+                    # remove the objects in that frame that are already in the `.json` file
+                    json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
+                    file_exists, json_file_data = get_json_file_data(json_file_path)
+                    if file_exists:
+                        object_list = remove_already_tracked_objects(object_list, img_path, json_file_data)
+                    if len(object_list) > 0:
+                        # get list of frames following this image
+                        next_frame_path_list = get_next_frame_path_list(video_name, img_path)
+                        # initial frame
+                        init_frame = img.copy()
+                        label_tracker = LabelTracker('KCF', init_frame, next_frame_path_list) # TODO: replace 'KCF' by 'CSRT'
+                        for obj in object_list:
+                            class_index = obj[0]
+                            color = class_rgb[class_index].tolist()
+                            label_tracker.start_tracker(json_file_data, json_file_path, img_path, obj, color, annotation_formats)
+            # quit key listener
+            elif pressed_key == ord('q'):
+                break
+            ''' Key Listeners END '''
 
-    if WITH_QT:
-        # if window gets closed then quit
-        if cv2.getWindowProperty(WINDOW_NAME, cv2.WND_PROP_VISIBLE) < 1:
-            break
+        if WITH_QT:
+            # if window gets closed then quit
+            if cv2.getWindowProperty(WINDOW_NAME, cv2.WND_PROP_VISIBLE) < 1:
+                break
 
-cv2.destroyAllWindows()
+    cv2.destroyAllWindows()
