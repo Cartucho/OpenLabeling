@@ -43,9 +43,10 @@ OBJECT_SCORE_THRESHOLD = float(config['OBJECT_DETECTOR_PARAMETERS']['OBJECT_SCOR
 OBJECT_IDS = config['OBJECT_DETECTOR_PARAMETERS']['OBJECT_IDS']
 OBJECT_IDS = [int (str) for str in OBJECT_IDS.split(",")]
 
-# Path of object detection
-# graph_model_path = "../object_detection/ssdlite_mobilenet_v2_coco_2018_05_09/frozen_inference_graph.pb"
-graph_model_path = "../object_detection/mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
+# # Path of object detection
+graph_model_path = "../object_detection/models/ssdlite_mobilenet_v2_coco_2018_05_09/frozen_inference_graph.pb"
+# graph_model_path = "../object_detection/models/mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
+# graph_model_path = "../object_detection/models/faster_rcnn_nas_coco_2018_01_28/frozen_inference_graph.pb"
 
 # Init object detector
 detector = ObjectDetector(graph_path=graph_model_path, score_threshold = OBJECT_SCORE_THRESHOLD,\
