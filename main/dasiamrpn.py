@@ -7,9 +7,31 @@ Desc   : Wrapper class for the DaSiamRPN tracking method. This class has the
 """
 import torch
 import numpy as np
-from os.path import realpath, dirname, join
+import sys
+from os.path import realpath, dirname, join, exists
+try:
+    from DaSiamRPN.code.run_SiamRPN import SiamRPN_init, SiamRPN_track
+except ImportError:
+    # check if the user has downloaded the submodules
+    if not exists(join('DaSiamRPN', 'code', 'net.py')):
+        print('Error: DaSiamRPN files not found. Please run the following command:')
+        print('\tgit submodule update --init')
+        exit()
+    else:
+        # if python 3
+        if sys.version_info >= (3, 0):
+            sys.path.append(realpath(join('DaSiamRPN', 'code')))
+        else:
+            # check if __init__py files exist (otherwise create them)
+            path_temp = join('DaSiamRPN', 'code', '__init__.py')
+            if not exists(path_temp):
+                open(path_temp, 'w').close()
+            path_temp = join('DaSiamRPN', '__init__.py')
+            if not exists(path_temp):
+                open(path_temp, 'w').close()
+        # try to import again
+        from DaSiamRPN.code.run_SiamRPN import SiamRPN_init, SiamRPN_track
 from DaSiamRPN.code.net import SiamRPNvot
-from DaSiamRPN.code.run_SiamRPN import SiamRPN_init, SiamRPN_track
 from DaSiamRPN.code.utils import get_axis_aligned_bbox, cxy_wh_2_rect
 
 class dasiamrpn(object):
@@ -20,8 +42,14 @@ class dasiamrpn(object):
     """
     def __init__(self):
         self.net = SiamRPNvot()
-        self.net.load_state_dict(torch.load(join(realpath(dirname(__file__)),
-            'SiamRPNVOT.model')))
+        # check if SiamRPNVOT.model was already downloaded (otherwise download it now)
+        model_path = join(realpath(dirname(__file__)), 'DaSiamRPN', 'code', 'SiamRPNVOT.model')
+        print(model_path)
+        if not exists(model_path):
+            print('\nError: module not found. Please download the pre-trained model and copy it to the directory \'DaSiamRPN/code/\'\n')
+            print('\tdownload link: https://drive.google.com/file/d/1-vNVZxfbIplXHrqMHiJJYWXYWsOIvGsf/view')
+            exit()
+        self.net.load_state_dict(torch.load(model_path))
         self.net.eval().cuda()
 
     def init(self, init_frame, initial_bbox):
