@@ -27,9 +27,10 @@ cv2.destroyAllWindows()
 
 parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
-parser.add_argument('-n', '--n_frames', default='5', type=int, help='number of frames to track object for')
 parser.add_argument('-o', '--output_dir', default='output', type=str, help='Path to output directory')
 parser.add_argument('-t', '--thickness', default='1', type=int, help='Bounding box and cross line thickness')
+parser.add_argument('--tracker', default='DASIAMRPN', type=str, help='Type of tracker being used')
+parser.add_argument('-n', '--n_frames', default='50', type=int, help='number of frames to track object for')
 args = parser.parse_args()
 
 class_index = 0
@@ -40,6 +41,7 @@ img_objects = []
 INPUT_DIR  = args.input_dir
 OUTPUT_DIR = args.output_dir
 N_FRAMES   = args.n_frames
+TRACKER_TYPE = args.tracker
 
 WINDOW_NAME    = 'OpenLabeling'
 TRACKBAR_IMG   = 'Image'
@@ -812,30 +814,36 @@ class LabelTracker():
 
 
     def call_tracker_constructor(self, tracker_type):
-        # -- TODO: remove this if I assume OpenCV version > 3.4.0
-        if int(self.major_ver == 3) and int(self.minor_ver) < 3:
-            #tracker = cv2.Tracker_create(tracker_type)
-            pass
-        # --
+        if tracker_type == 'DASIAMRPN':
+            tracker = dasiamrpn()
         else:
-            if tracker_type == 'CSRT':
-                tracker = cv2.TrackerCSRT_create()
-            elif tracker_type == 'KCF':
-                tracker = cv2.TrackerKCF_create()
-            elif tracker_type == 'MOSSE':
-                tracker = cv2.TrackerMOSSE_create()
-            elif tracker_type == 'MIL':
-                tracker = cv2.TrackerMIL_create()
-            elif tracker_type == 'BOOSTING':
-                tracker = cv2.TrackerBoosting_create()
-            elif tracker_type == 'MEDIANFLOW':
-                tracker = cv2.TrackerMedianFlow_create()
-            elif tracker_type == 'TLD':
-                tracker = cv2.TrackerTLD_create()
-            elif tracker_type == 'GOTURN':
-                tracker = cv2.TrackerGOTURN_create()
-            elif tracker_type == 'DASIAMRPN':
-                tracker = dasiamrpn()
+            # -- TODO: remove this if I assume OpenCV version > 3.4.0
+            if int(self.major_ver == 3) and int(self.minor_ver) < 3:
+                #tracker = cv2.Tracker_create(tracker_type)
+                pass
+            # --
+            else:
+                try:
+                    tracker = cv2.TrackerKCF_create()
+                except AttributeError as error:
+                    print(error)
+                    print('\nMake sure that OpenCV contribute is installed: opencv-contrib-python\n')
+                if tracker_type == 'CSRT':
+                    tracker = cv2.TrackerCSRT_create()
+                elif tracker_type == 'KCF':
+                    tracker = cv2.TrackerKCF_create()
+                elif tracker_type == 'MOSSE':
+                    tracker = cv2.TrackerMOSSE_create()
+                elif tracker_type == 'MIL':
+                    tracker = cv2.TrackerMIL_create()
+                elif tracker_type == 'BOOSTING':
+                    tracker = cv2.TrackerBoosting_create()
+                elif tracker_type == 'MEDIANFLOW':
+                    tracker = cv2.TrackerMedianFlow_create()
+                elif tracker_type == 'TLD':
+                    tracker = cv2.TrackerTLD_create()
+                elif tracker_type == 'GOTURN':
+                    tracker = cv2.TrackerGOTURN_create()
         return tracker
 
 
@@ -1088,7 +1096,7 @@ if __name__ == '__main__':
                         next_frame_path_list = get_next_frame_path_list(video_name, img_path)
                         # initial frame
                         init_frame = img.copy()
-                        label_tracker = LabelTracker('KCF', init_frame, next_frame_path_list) # TODO: replace 'KCF' by 'CSRT'
+                        label_tracker = LabelTracker(TRACKER_TYPE, init_frame, next_frame_path_list)
                         for obj in object_list:
                             class_index = obj[0]
                             color = class_rgb[class_index].tolist()
