@@ -12,6 +12,7 @@ from tqdm import tqdm
 from lxml import etree
 import xml.etree.cElementTree as ET
 
+from dasiamrpn import dasiamrpn
 
 DELAY = 20 # keyboard delay (in milliseconds)
 WITH_QT = False
@@ -26,6 +27,7 @@ cv2.destroyAllWindows()
 
 parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
+parser.add_argument('-n', '--n_frames', default='5', type=int, help='number of frames to track object for')
 parser.add_argument('-o', '--output_dir', default='output', type=str, help='Path to output directory')
 parser.add_argument('-t', '--thickness', default='1', type=int, help='Bounding box and cross line thickness')
 args = parser.parse_args()
@@ -35,11 +37,12 @@ img_index = 0
 img = None
 img_objects = []
 
-INPUT_DIR = args.input_dir
+INPUT_DIR  = args.input_dir
 OUTPUT_DIR = args.output_dir
+N_FRAMES   = args.n_frames
 
-WINDOW_NAME = 'OpenLabeling'
-TRACKBAR_IMG = 'Image'
+WINDOW_NAME    = 'OpenLabeling'
+TRACKBAR_IMG   = 'Image'
 TRACKBAR_CLASS = 'Class'
 
 annotation_formats = {'PASCAL_VOC' : '.xml', 'YOLO_darknet' : '.txt'}
@@ -407,7 +410,7 @@ def edit_bbox(obj_to_edit, action):
         new_x_right = min(width, int(action.split(':')[3]))
         new_y_bottom = min(height, int(action.split(':')[4]))
 
-    # 1. initialize bboxes_to_edit_dict 
+    # 1. initialize bboxes_to_edit_dict
     #    (we use a dict since a single label can be associated with multiple ones in videos)
     bboxes_to_edit_dict = {}
     current_img_path = IMAGE_PATH_LIST[img_index]
@@ -569,7 +572,7 @@ def mouse_listener(event, x, y, flags, param):
                     point_1 = (x, y)
             else:
                 # minimal size for bounding box to avoid errors
-                threshold = 10
+                threshold = 5
                 if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
                     # second click
                     point_2 = (x, y)
@@ -790,7 +793,7 @@ class LabelTracker():
     # TODO: press ESC to stop the tracking process
 
     def __init__(self, tracker_type, init_frame, next_frame_path_list):
-        tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN']
+        tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']
         ''' Recomended tracker_type:
               KCF -> KCF is usually very good (minimum OpenCV 3.1.0)
               CSRT -> More accurate than KCF but slightly slower (minimum OpenCV 3.4.2)
@@ -811,7 +814,8 @@ class LabelTracker():
     def call_tracker_constructor(self, tracker_type):
         # -- TODO: remove this if I assume OpenCV version > 3.4.0
         if int(self.major_ver == 3) and int(self.minor_ver) < 3:
-            tracker = cv2.Tracker_create(tracker_type)
+            #tracker = cv2.Tracker_create(tracker_type)
+            pass
         # --
         else:
             if tracker_type == 'CSRT':
@@ -830,6 +834,8 @@ class LabelTracker():
                 tracker = cv2.TrackerTLD_create()
             elif tracker_type == 'GOTURN':
                 tracker = cv2.TrackerGOTURN_create()
+            elif tracker_type == 'DASIAMRPN':
+                tracker = dasiamrpn()
         return tracker
 
 
@@ -848,6 +854,8 @@ class LabelTracker():
             next_image = cv2.imread(frame_path)
             # get the new bbox prediction of the object
             success, bbox = tracker.update(next_image.copy())
+            if pred_counter >= N_FRAMES:
+                success = False
             if success:
                 pred_counter += 1
                 xmin, ymin, w, h = map(int, bbox)
