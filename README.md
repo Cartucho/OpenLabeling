@@ -1,21 +1,6 @@
 # OpenLabeling: open-source image and video labeler
 
 
-# New features:
-- Auto labeling by using combination between Tracker and Deep Learning Object Detection Model
-
-# How to use
-- Download one or some deep learning models from https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
-  and put it into `object_detection` directory. The outline of `object_detection` looks like that:
-  + `tf_object_detection.py`
-  + `utils.py`
-  + `ssdlite_mobilenet_v2_coco_2018_05_09` . Download by clicking this link http://download.tensorflow.org/models/object_detection/ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz
-  + Or `mask_rcnn_inception_v2_coco_2018_01_28`. Download by clicking this link http://download.tensorflow.org/models/object_detection/mask_rcnn_inception_v2_coco_2018_01_28.tar.gz
-  
-  **Note**: Default model used in `main_auto.py` is `mask_rcnn_inception_v2_coco_2018_01_28`. We can
-  set `graph_model_path` in file `main_auto.py` to change the pretrain model
-- Using `main_auto.py` to automatically label data first
-
 # Plan 
 - Combine with state of the art deep learning tracker
 
@@ -31,6 +16,7 @@ Image labeling in multiple annotation formats:
 
 ## Latest Features
 
+- Jun 2019: Deep Learning Object Detection Model
 - May 2019: [ECCV2018] Distractor-aware Siamese Networks for Visual Object Tracking
 - Jan 2019: easy and quick bounding-boxe's resizing!
 - Jan 2019: video object tracking with OpenCV trackers!
@@ -92,6 +78,22 @@ Step by step:
           -t, --thickness           Bounding box and cross line thickness (int) | Default: -t 1
 
   5. You can find the annotations in the folder **output/**
+
+#### How to use the deep learning feature
+
+- Download one or some deep learning models from https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
+  and put it into `object_detection/models` directory (you need to create the `models` folder by yourself). The outline of `object_detection` looks like that:
+  + `tf_object_detection.py`
+  + `utils.py`
+  + `models/ssdlite_mobilenet_v2_coco_2018_05_09`
+
+Download the pre-trained model by clicking this link http://download.tensorflow.org/models/object_detection/ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz and put it into `object_detection/models`. Create the `models` folder if necessary. Make sure to extract the model.
+
+  **Note**: Default model used in `main_auto.py` is `ssdlite_mobilenet_v2_coco_2018_05_09`. We can
+  set `graph_model_path` in file `main_auto.py` to change the pretrain model
+- Using `main_auto.py` to automatically label data first
+
+  TODO: explain how the user can 
 
 ### GUI usage
 
