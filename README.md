@@ -31,6 +31,7 @@ Image labeling in multiple annotation formats:
 
 ## Latest Features
 
+- May 2019: [ECCV2018] Distractor-aware Siamese Networks for Visual Object Tracking
 - Jan 2019: easy and quick bounding-boxe's resizing!
 - Jan 2019: video object tracking with OpenCV trackers!
 - TODO: Label photos via Google drive to allow "team online labeling".
