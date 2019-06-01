@@ -55,6 +55,8 @@ python -mpip install -U pip
 python -mpip install -U -r requirements.txt
 ```
 - [PyTorch](https://pytorch.org/get-started/locally/) 
+    Visit the link for a configurator for your setup.
+    
 ### Run project
 
 Step by step:
