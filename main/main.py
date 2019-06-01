@@ -12,6 +12,7 @@ from tqdm import tqdm
 from lxml import etree
 import xml.etree.cElementTree as ET
 
+from dasiamrpn import dasiamrpn
 
 DELAY = 20 # keyboard delay (in milliseconds)
 WITH_QT = False
@@ -28,6 +29,8 @@ parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
 parser.add_argument('-o', '--output_dir', default='output', type=str, help='Path to output directory')
 parser.add_argument('-t', '--thickness', default='1', type=int, help='Bounding box and cross line thickness')
+parser.add_argument('--tracker', default='KCF', type=str, help='Type of tracker being used')
+parser.add_argument('-n', '--n_frames', default='50', type=int, help='number of frames to track object for')
 args = parser.parse_args()
 
 class_index = 0
@@ -35,11 +38,13 @@ img_index = 0
 img = None
 img_objects = []
 
-INPUT_DIR = args.input_dir
+INPUT_DIR  = args.input_dir
 OUTPUT_DIR = args.output_dir
+N_FRAMES   = args.n_frames
+TRACKER_TYPE = args.tracker
 
-WINDOW_NAME = 'OpenLabeling'
-TRACKBAR_IMG = 'Image'
+WINDOW_NAME    = 'OpenLabeling'
+TRACKBAR_IMG   = 'Image'
 TRACKBAR_CLASS = 'Class'
 
 annotation_formats = {'PASCAL_VOC' : '.xml', 'YOLO_darknet' : '.txt'}
@@ -569,7 +574,7 @@ def mouse_listener(event, x, y, flags, param):
                     point_1 = (x, y)
             else:
                 # minimal size for bounding box to avoid errors
-                threshold = 10
+                threshold = 5
                 if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
                     # second click
                     point_2 = (x, y)
@@ -790,7 +795,7 @@ class LabelTracker():
     # TODO: press ESC to stop the tracking process
 
     def __init__(self, tracker_type, init_frame, next_frame_path_list):
-        tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN']
+        tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']
         ''' Recomended tracker_type:
               KCF -> KCF is usually very good (minimum OpenCV 3.1.0)
               CSRT -> More accurate than KCF but slightly slower (minimum OpenCV 3.4.2)
@@ -809,27 +814,36 @@ class LabelTracker():
 
 
     def call_tracker_constructor(self, tracker_type):
-        # -- TODO: remove this if I assume OpenCV version > 3.4.0
-        if int(self.major_ver == 3) and int(self.minor_ver) < 3:
-            tracker = cv2.Tracker_create(tracker_type)
-        # --
+        if tracker_type == 'DASIAMRPN':
+            tracker = dasiamrpn()
         else:
-            if tracker_type == 'CSRT':
-                tracker = cv2.TrackerCSRT_create()
-            elif tracker_type == 'KCF':
-                tracker = cv2.TrackerKCF_create()
-            elif tracker_type == 'MOSSE':
-                tracker = cv2.TrackerMOSSE_create()
-            elif tracker_type == 'MIL':
-                tracker = cv2.TrackerMIL_create()
-            elif tracker_type == 'BOOSTING':
-                tracker = cv2.TrackerBoosting_create()
-            elif tracker_type == 'MEDIANFLOW':
-                tracker = cv2.TrackerMedianFlow_create()
-            elif tracker_type == 'TLD':
-                tracker = cv2.TrackerTLD_create()
-            elif tracker_type == 'GOTURN':
-                tracker = cv2.TrackerGOTURN_create()
+            # -- TODO: remove this if I assume OpenCV version > 3.4.0
+            if int(self.major_ver == 3) and int(self.minor_ver) < 3:
+                #tracker = cv2.Tracker_create(tracker_type)
+                pass
+            # --
+            else:
+                try:
+                    tracker = cv2.TrackerKCF_create()
+                except AttributeError as error:
+                    print(error)
+                    print('\nMake sure that OpenCV contribute is installed: opencv-contrib-python\n')
+                if tracker_type == 'CSRT':
+                    tracker = cv2.TrackerCSRT_create()
+                elif tracker_type == 'KCF':
+                    tracker = cv2.TrackerKCF_create()
+                elif tracker_type == 'MOSSE':
+                    tracker = cv2.TrackerMOSSE_create()
+                elif tracker_type == 'MIL':
+                    tracker = cv2.TrackerMIL_create()
+                elif tracker_type == 'BOOSTING':
+                    tracker = cv2.TrackerBoosting_create()
+                elif tracker_type == 'MEDIANFLOW':
+                    tracker = cv2.TrackerMedianFlow_create()
+                elif tracker_type == 'TLD':
+                    tracker = cv2.TrackerTLD_create()
+                elif tracker_type == 'GOTURN':
+                    tracker = cv2.TrackerGOTURN_create()
         return tracker
 
 
@@ -848,6 +862,8 @@ class LabelTracker():
             next_image = cv2.imread(frame_path)
             # get the new bbox prediction of the object
             success, bbox = tracker.update(next_image.copy())
+            if pred_counter >= N_FRAMES:
+                success = False
             if success:
                 pred_counter += 1
                 xmin, ymin, w, h = map(int, bbox)
@@ -1080,7 +1096,7 @@ if __name__ == '__main__':
                         next_frame_path_list = get_next_frame_path_list(video_name, img_path)
                         # initial frame
                         init_frame = img.copy()
-                        label_tracker = LabelTracker('KCF', init_frame, next_frame_path_list) # TODO: replace 'KCF' by 'CSRT'
+                        label_tracker = LabelTracker(TRACKER_TYPE, init_frame, next_frame_path_list)
                         for obj in object_list:
                             class_index = obj[0]
                             color = class_rgb[class_index].tolist()
