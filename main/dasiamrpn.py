@@ -47,10 +47,10 @@ class dasiamrpn(object):
         print(model_path)
         if not exists(model_path):
             print('\nError: module not found. Please download the pre-trained model and copy it to the directory \'DaSiamRPN/code/\'\n')
-            print('\tdownload link: https://drive.google.com/file/d/1-vNVZxfbIplXHrqMHiJJYWXYWsOIvGsf/view')
+            print('\tdownload link: https://drive.google.com/drive/folders/1BtIkp5pB6aqePQGlMb2_Z7bfPy6XEj6Ho')
             exit()
-        self.net.load_state_dict(torch.load(model_path))
-        self.net.eval().cuda()
+        self.net.load_state_dict(torch.load(model_path,map_location='cpu'))
+        #self.net.eval().cuda()
 
     def init(self, init_frame, initial_bbox):
         """
