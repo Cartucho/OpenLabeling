@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
 parser.add_argument('-o', '--output_dir', default='output', type=str, help='Path to output directory')
 parser.add_argument('-t', '--thickness', default='1', type=int, help='Bounding box and cross line thickness')
-parser.add_argument('--tracker', default='DASIAMRPN', type=str, help='Type of tracker being used')
+parser.add_argument('--tracker', default='KCF', type=str, help='Type of tracker being used')
 parser.add_argument('-n', '--n_frames', default='50', type=int, help='number of frames to track object for')
 args = parser.parse_args()
 
