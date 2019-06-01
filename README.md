@@ -1,9 +1,5 @@
 # OpenLabeling: open-source image and video labeler
 
-
-# Plan 
-- Combine with state of the art deep learning tracker
-
 [![GitHub stars](https://img.shields.io/github/stars/Cartucho/OpenLabeling.svg?style=social&label=Stars)](https://github.com/Cartucho/OpenLabeling)
 
 Image labeling in multiple annotation formats:
