@@ -79,7 +79,7 @@ Step by step:
   To use DASIAMRPN Tracker:
   1. Install the [DaSiamRPN](https://github.com/foolwood/DaSiamRPN) submodule and download the model (VOT) from [google drive](https://drive.google.com/drive/folders/1BtIkp5pB6aqePQGlMb2_Z7bfPy6XEj6H)
   2. copy it into 'DaSiamRPN/code/'
-  (optional) To use with CPU only: 
+  3. set default tracker in main.py or run it with --tracker DASIAMRPN
 
 
 ### GUI usage
