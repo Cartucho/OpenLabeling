@@ -65,17 +65,21 @@ Step by step:
   2. Insert the input images and videos in the folder **input/**
   3. Insert the classes in the file **class_list.txt** (one class name per line)
   4. Run the code:
+  5. You can find the annotations in the folder **output/**
 
-         python main.py [-h] [-i] [-o] [-t]
+         python main.py [-h] [-i] [-o] [-t] [--tracker TRACKER_TYPE] [-n N_FRAMES]
 
          optional arguments:
           -h, --help                Show this help message and exit
           -i, --input               Path to images and videos input folder | Default: input/
           -o, --output              Path to output folder (if using the PASCAL VOC format it's important to set this path correctly) | Default: output/
           -t, --thickness           Bounding box and cross line thickness (int) | Default: -t 1
+          --tracker tracker_type    tracker_type to use: ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']
+          -n N_FRAMES               Amount of frames tracked in a row
+  To use DASIAMRPN Tracker:
+  1. Install the [DaSiamRPN](https://github.com/foolwood/DaSiamRPN) submodule and download the model (VOT) from [google drive](https://drive.google.com/drive/folders/1BtIkp5pB6aqePQGlMb2_Z7bfPy6XEj6H)
+  2. copy it into 'DaSiamRPN/code/'
 
-  5. Install the [DaSiamRPN](https://github.com/foolwood/DaSiamRPN) submodule and download the model from [google drive](https://drive.google.com/drive/folders/1BtIkp5pB6aqePQGlMb2_Z7bfPy6XEj6H)
-  6. You can find the annotations in the folder **output/**
 
 
 ### GUI usage
