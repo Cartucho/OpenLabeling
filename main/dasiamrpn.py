@@ -9,6 +9,9 @@ import torch
 import numpy as np
 import sys
 from os.path import realpath, dirname, join, exists
+# set device, depending on whether cuda is available
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 try:
     from DaSiamRPN.code.run_SiamRPN import SiamRPN_init, SiamRPN_track
 except ImportError:
@@ -47,10 +50,17 @@ class dasiamrpn(object):
         print(model_path)
         if not exists(model_path):
             print('\nError: module not found. Please download the pre-trained model and copy it to the directory \'DaSiamRPN/code/\'\n')
-            print('\tdownload link: https://drive.google.com/drive/folders/1BtIkp5pB6aqePQGlMb2_Z7bfPy6XEj6Ho')
+            print('\tdownload link: https://drive.google.com/file/d/1-vNVZxfbIplXHrqMHiJJYWXYWsOIvGsf/view')
             exit()
-        self.net.load_state_dict(torch.load(model_path,map_location='cpu'))
-        #self.net.eval().cuda()
+        
+
+            if(torch.cuda.is_available):
+                self.net.load_state_dict(torch.load(model_path))
+            else:
+                self.net.load_state_dict(torch.load(model_path,map_location='cpu'))
+
+            self.net.eval().to(device)
+            
 
     def init(self, init_frame, initial_bbox):
         """
