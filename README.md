@@ -12,6 +12,7 @@ Image labeling in multiple annotation formats:
 
 ## Latest Features
 
+- Jun 2019: Deep Learning Object Detection Model
 - May 2019: [ECCV2018] Distractor-aware Siamese Networks for Visual Object Tracking
 - Jan 2019: easy and quick bounding-boxe's resizing!
 - Jan 2019: video object tracking with OpenCV trackers!
@@ -81,6 +82,22 @@ Step by step:
   2. copy it into 'DaSiamRPN/code/'
   3. set default tracker in main.py or run it with --tracker DASIAMRPN
 
+
+#### How to use the deep learning feature
+
+- Download one or some deep learning models from https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
+  and put it into `object_detection/models` directory (you need to create the `models` folder by yourself). The outline of `object_detection` looks like that:
+  + `tf_object_detection.py`
+  + `utils.py`
+  + `models/ssdlite_mobilenet_v2_coco_2018_05_09`
+
+Download the pre-trained model by clicking this link http://download.tensorflow.org/models/object_detection/ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz and put it into `object_detection/models`. Create the `models` folder if necessary. Make sure to extract the model.
+
+  **Note**: Default model used in `main_auto.py` is `ssdlite_mobilenet_v2_coco_2018_05_09`. We can
+  set `graph_model_path` in file `main_auto.py` to change the pretrain model
+- Using `main_auto.py` to automatically label data first
+
+  TODO: explain how the user can 
 
 ### GUI usage
 
