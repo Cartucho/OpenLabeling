@@ -1,4 +1,3 @@
-human
+person
 billiard ball
 donut
-rabbit
