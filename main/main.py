@@ -29,7 +29,14 @@ parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
 parser.add_argument('-o', '--output_dir', default='output', type=str, help='Path to output directory')
 parser.add_argument('-t', '--thickness', default='1', type=int, help='Bounding box and cross line thickness')
-parser.add_argument('--tracker', default='KCF', type=str, help='Type of tracker being used')
+'''
+tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']
+    Recomended tracker_type:
+        KCF -> KCF is usually very good (minimum OpenCV 3.1.0)
+        CSRT -> More accurate than KCF but slightly slower (minimum OpenCV 3.4.2)
+        MOSSE -> Less accurate than KCF but very fast (minimum OpenCV 3.4.1)
+'''
+parser.add_argument('--tracker', default='KCF', type=str, help="tracker_type being used: ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']")
 parser.add_argument('-n', '--n_frames', default='50', type=int, help='number of frames to track object for')
 args = parser.parse_args()
 
