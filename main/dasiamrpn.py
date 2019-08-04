@@ -14,8 +14,6 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 try:
     from DaSiamRPN.code.run_SiamRPN import SiamRPN_init, SiamRPN_track
-    from DaSiamRPN.code.utils import get_axis_aligned_bbox, cxy_wh_2_rect
-    from DaSiamRPN.code.net import SiamRPNvot
 except ImportError:
     # check if the user has downloaded the submodules
     if not exists(join('DaSiamRPN', 'code', 'net.py')):
@@ -36,7 +34,8 @@ except ImportError:
                 open(path_temp, 'w').close()
         # try to import again
         from DaSiamRPN.code.run_SiamRPN import SiamRPN_init, SiamRPN_track
-
+from DaSiamRPN.code.utils import get_axis_aligned_bbox, cxy_wh_2_rect
+from DaSiamRPN.code.net import SiamRPNvot
 
 class dasiamrpn(object):
     """
