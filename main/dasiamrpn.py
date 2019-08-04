@@ -5,8 +5,6 @@ Desc   : Wrapper class for the DaSiamRPN tracking method. This class has the
          methods required to interface with the tracking class implemented
          in main.py within the OpenLabeling package.
 """
-from DaSiamRPN.code.utils import get_axis_aligned_bbox, cxy_wh_2_rect
-from DaSiamRPN.code.net import SiamRPNvot
 import torch
 import numpy as np
 import sys
@@ -16,6 +14,8 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 try:
     from DaSiamRPN.code.run_SiamRPN import SiamRPN_init, SiamRPN_track
+    from DaSiamRPN.code.utils import get_axis_aligned_bbox, cxy_wh_2_rect
+    from DaSiamRPN.code.net import SiamRPNvot
 except ImportError:
     # check if the user has downloaded the submodules
     if not exists(join('DaSiamRPN', 'code', 'net.py')):
