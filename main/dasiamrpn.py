@@ -5,10 +5,15 @@ Desc   : Wrapper class for the DaSiamRPN tracking method. This class has the
          methods required to interface with the tracking class implemented
          in main.py within the OpenLabeling package.
 """
+from DaSiamRPN.code.utils import get_axis_aligned_bbox, cxy_wh_2_rect
+from DaSiamRPN.code.net import SiamRPNvot
 import torch
 import numpy as np
 import sys
 from os.path import realpath, dirname, join, exists
+# set device, depending on whether cuda is available
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 try:
     from DaSiamRPN.code.run_SiamRPN import SiamRPN_init, SiamRPN_track
 except ImportError:
@@ -31,8 +36,7 @@ except ImportError:
                 open(path_temp, 'w').close()
         # try to import again
         from DaSiamRPN.code.run_SiamRPN import SiamRPN_init, SiamRPN_track
-from DaSiamRPN.code.net import SiamRPNvot
-from DaSiamRPN.code.utils import get_axis_aligned_bbox, cxy_wh_2_rect
+
 
 class dasiamrpn(object):
     """
@@ -40,6 +44,7 @@ class dasiamrpn(object):
     (https://github.com/foolwood/DaSiamRPN,
     https://github.com/Cartucho/OpenLabeling)
     """
+
     def __init__(self):
         self.net = SiamRPNvot()
         # check if SiamRPNVOT.model was already downloaded (otherwise download it now)
@@ -47,10 +52,17 @@ class dasiamrpn(object):
         print(model_path)
         if not exists(model_path):
             print('\nError: module not found. Please download the pre-trained model and copy it to the directory \'DaSiamRPN/code/\'\n')
-            print('\tdownload link: https://drive.google.com/file/d/1-vNVZxfbIplXHrqMHiJJYWXYWsOIvGsf/view')
+            print('\tdownload link: https://github.com/fogx/DaSiamRPN_noCUDA/blob/master/SiamRPNVOT.model')
             exit()
-        self.net.load_state_dict(torch.load(model_path))
-        self.net.eval().cuda()
+        
+
+
+        if(torch.cuda.is_available()):
+            self.net.load_state_dict(torch.load(model_path))
+        else:
+            self.net.load_state_dict(torch.load(model_path,map_location='cpu'))
+        self.net.eval().to(device)
+            
 
     def init(self, init_frame, initial_bbox):
         """
