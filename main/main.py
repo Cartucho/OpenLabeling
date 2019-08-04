@@ -32,12 +32,13 @@ parser.add_argument('-t', '--thickness', default='1', type=int, help='Bounding b
 '''
 tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']
     Recomended tracker_type:
+        DASIAMRPN -> best
         KCF -> KCF is usually very good (minimum OpenCV 3.1.0)
         CSRT -> More accurate than KCF but slightly slower (minimum OpenCV 3.4.2)
         MOSSE -> Less accurate than KCF but very fast (minimum OpenCV 3.4.1)
 '''
-parser.add_argument('--tracker', default='KCF', type=str, help="tracker_type being used: ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']")
-parser.add_argument('-n', '--n_frames', default='50', type=int, help='number of frames to track object for')
+parser.add_argument('--tracker', default='DASIAMRPN', type=str, help="tracker_type being used: ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']")
+parser.add_argument('-n', '--n_frames', default='200', type=int, help='number of frames to track object for')
 args = parser.parse_args()
 
 class_index = 0
