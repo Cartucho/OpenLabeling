@@ -130,14 +130,10 @@ class dragBBox:
     \brief This method is used to select an object if one presses a resizing anchor
     '''
     @staticmethod
-    def handler_left_mouse_down(eX, eY, image_object):
-        # Find selected_image_object_index
-        if img_objects is not None:
-            for idx, obj in enumerate(img_objects):
-                dragBBox.check_point_inside_resizing_anchors(eX, eY, obj)
-                if dragBBox.anchor_being_dragged is not None:
-                    dragBBox.selected_object = obj
-                    break
+    def handler_left_mouse_down(eX, eY, obj):
+        dragBBox.check_point_inside_resizing_anchors(eX, eY, obj)
+        if dragBBox.anchor_being_dragged is not None:
+            dragBBox.selected_object = obj
 
     @staticmethod
     def handler_mouse_move(eX, eY):
@@ -350,21 +346,24 @@ def draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color):
     return tmp_img
 
 def draw_bboxes_from_file(tmp_img, annotation_paths, width, height):
-    global img_objects
+    global img_objects#, is_bbox_selected, selected_bbox
     img_objects = []
     ann_path = next(path for path in annotation_paths if 'PASCAL_VOC' in path)
     if os.path.isfile(ann_path):
         tree = ET.parse(ann_path)
         annotation = tree.getroot()
-        for obj in annotation.findall('object'):
+
+        for idx, obj in enumerate(annotation.findall('object')):
             class_name, class_index, xmin, ymin, xmax, ymax = get_xml_object_data(obj)
             #print('{} {} {} {} {}'.format(class_index, xmin, ymin, xmax, ymax))
             img_objects.append([class_index, xmin, ymin, xmax, ymax])
             color = class_rgb[class_index].tolist()
             # draw bbox
             cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
-            # draw resizing anchors
-            tmp_img = draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color)
+            # draw resizing anchors if the object is selected
+            if is_bbox_selected:
+                if idx == selected_bbox:
+                    tmp_img = draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color)
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(tmp_img, class_name, (xmin, ymin - 5), font, 0.6, color, LINE_THICKNESS, cv2.LINE_AA)
     return tmp_img
@@ -541,6 +540,7 @@ def mouse_listener(event, x, y, flags, param):
     # mouse callback function
     global is_bbox_selected, prev_was_double_click, mouse_x, mouse_y, point_1, point_2
 
+    set_class = True
     if event == cv2.EVENT_MOUSEMOVE:
         mouse_x = x
         mouse_y = y
@@ -549,7 +549,6 @@ def mouse_listener(event, x, y, flags, param):
         #print('Double click')
         point_1 = (-1, -1)
         # if clicked inside a bounding box we set that bbox
-        set_class = True
         set_selected_bbox(set_class)
     # By AlexeyGy: delete via right-click
     elif event == cv2.EVENT_RBUTTONDOWN:
@@ -557,35 +556,37 @@ def mouse_listener(event, x, y, flags, param):
         set_selected_bbox(set_class)
         if is_bbox_selected:
             obj_to_edit = img_objects[selected_bbox]
-            edit_bbox(obj_to_edit, 'delete')
+            edit_bbox(obj_to_edit, 'delete') # TODO: remove
             is_bbox_selected = False
     elif event == cv2.EVENT_LBUTTONDOWN:
         if prev_was_double_click:
             #print('Finish double click')
             prev_was_double_click = False
+        else:
+            #print('Normal left click')
 
-        #print('Normal left click')
+            # Check if mouse inside on of resizing anchors of the selected bbox
+            if is_bbox_selected:
+                dragBBox.handler_left_mouse_down(x, y, img_objects[selected_bbox])
 
-        # Check if mouse inside on of resizing anchors of any bboxes
-        dragBBox.handler_left_mouse_down(x, y, img_objects)
+            if dragBBox.anchor_being_dragged is None:
+                if point_1[0] is -1:
+                    if is_bbox_selected:
+                        if is_mouse_inside_delete_button():
+                            set_selected_bbox(set_class)
+                            obj_to_edit = img_objects[selected_bbox]
+                            edit_bbox(obj_to_edit, 'delete')
+                        is_bbox_selected = False
+                    else:
+                        # first click (start drawing a bounding box or delete an item)
 
-        if dragBBox.anchor_being_dragged is None:
-            if point_1[0] is -1:
-                if is_bbox_selected:
-                    if is_mouse_inside_delete_button():
-                        set_selected_bbox(set_class)
-                        obj_to_edit = img_objects[selected_bbox]
-                        edit_bbox(obj_to_edit, 'delete')
-                    is_bbox_selected = False
+                        point_1 = (x, y)
                 else:
-                    # first click (start drawing a bounding box or delete an item)
-                    point_1 = (x, y)
-            else:
-                # minimal size for bounding box to avoid errors
-                threshold = 5
-                if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
-                    # second click
-                    point_2 = (x, y)
+                    # minimal size for bounding box to avoid errors
+                    threshold = 5
+                    if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
+                        # second click
+                        point_2 = (x, y)
 
     elif event == cv2.EVENT_LBUTTONUP:
         if dragBBox.anchor_being_dragged is not None:
