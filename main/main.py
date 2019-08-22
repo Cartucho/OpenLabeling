@@ -352,7 +352,6 @@ def draw_bboxes_from_file(tmp_img, annotation_paths, width, height):
     if os.path.isfile(ann_path):
         tree = ET.parse(ann_path)
         annotation = tree.getroot()
-
         for idx, obj in enumerate(annotation.findall('object')):
             class_name, class_index, xmin, ymin, xmax, ymax = get_xml_object_data(obj)
             #print('{} {} {} {} {}'.format(class_index, xmin, ymin, xmax, ymax))
@@ -556,7 +555,7 @@ def mouse_listener(event, x, y, flags, param):
         set_selected_bbox(set_class)
         if is_bbox_selected:
             obj_to_edit = img_objects[selected_bbox]
-            edit_bbox(obj_to_edit, 'delete') # TODO: remove
+            edit_bbox(obj_to_edit, 'delete')
             is_bbox_selected = False
     elif event == cv2.EVENT_LBUTTONDOWN:
         if prev_was_double_click:
