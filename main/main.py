@@ -29,6 +29,7 @@ parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
 parser.add_argument('-o', '--output_dir', default='output', type=str, help='Path to output directory')
 parser.add_argument('-t', '--thickness', default='1', type=int, help='Bounding box and cross line thickness')
+parser.add_argument('--draw-from-PASCAL-files', action='store_true', help='Draw bounding boxes from the PASCAL files') # default YOLO
 '''
 tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']
     Recomended tracker_type:
@@ -57,6 +58,8 @@ TRACKBAR_CLASS = 'Class'
 
 annotation_formats = {'PASCAL_VOC' : '.xml', 'YOLO_darknet' : '.txt'}
 TRACKER_DIR = os.path.join(OUTPUT_DIR, '.tracker')
+
+DRAW_FROM_PASCAL = args.draw_from_PASCAL_files
 
 # selected bounding box
 prev_was_double_click = False
@@ -313,6 +316,22 @@ def get_xml_object_data(obj):
     return [class_name, class_index, xmin, ymin, xmax, ymax]
 
 
+def get_txt_object_data(obj, img_width, img_height):
+    classId, centerX, centerY, bbox_width, bbox_height = obj.split()
+    bbox_width = float(bbox_width)
+    bbox_height  = float(bbox_height)
+    centerX = float(centerX)
+    centerY = float(centerY)
+
+    class_index = int(classId)
+    class_name = CLASS_LIST[class_index]
+    xmin = int(img_width * (centerX - bbox_width/2))
+    xmax = int(img_width * (centerX + bbox_width/2))
+    ymin = int(img_height * (centerY - bbox_height/2 ))
+    ymax = int(img_height * (centerY + bbox_height/2))
+    return [class_name, class_index, xmin, ymin, xmax, ymax]
+
+
 def get_anchors_rectangles(xmin, ymin, xmax, ymax):
     anchor_list = {}
 
@@ -348,23 +367,47 @@ def draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color):
 def draw_bboxes_from_file(tmp_img, annotation_paths, width, height):
     global img_objects#, is_bbox_selected, selected_bbox
     img_objects = []
-    ann_path = next(path for path in annotation_paths if 'PASCAL_VOC' in path)
+    ann_path = None
+    if DRAW_FROM_PASCAL:
+        # Drawing bounding boxes from the PASCAL files
+        ann_path = next(path for path in annotation_paths if 'PASCAL_VOC' in path)
+    else:
+        # Drawing bounding boxes from the YOLO files
+        ann_path = next(path for path in annotation_paths if 'YOLO_darknet' in path)
     if os.path.isfile(ann_path):
-        tree = ET.parse(ann_path)
-        annotation = tree.getroot()
-        for idx, obj in enumerate(annotation.findall('object')):
-            class_name, class_index, xmin, ymin, xmax, ymax = get_xml_object_data(obj)
-            #print('{} {} {} {} {}'.format(class_index, xmin, ymin, xmax, ymax))
-            img_objects.append([class_index, xmin, ymin, xmax, ymax])
-            color = class_rgb[class_index].tolist()
-            # draw bbox
-            cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
-            # draw resizing anchors if the object is selected
-            if is_bbox_selected:
-                if idx == selected_bbox:
-                    tmp_img = draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color)
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(tmp_img, class_name, (xmin, ymin - 5), font, 0.6, color, LINE_THICKNESS, cv2.LINE_AA)
+        if DRAW_FROM_PASCAL:
+            tree = ET.parse(ann_path)
+            annotation = tree.getroot()
+            for idx, obj in enumerate(annotation.findall('object')):
+                class_name, class_index, xmin, ymin, xmax, ymax = get_xml_object_data(obj)
+                #print('{} {} {} {} {}'.format(class_index, xmin, ymin, xmax, ymax))
+                img_objects.append([class_index, xmin, ymin, xmax, ymax])
+                color = class_rgb[class_index].tolist()
+                # draw bbox
+                cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
+                # draw resizing anchors if the object is selected
+                if is_bbox_selected:
+                    if idx == selected_bbox:
+                        tmp_img = draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color)
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.putText(tmp_img, class_name, (xmin, ymin - 5), font, 0.6, color, LINE_THICKNESS, cv2.LINE_AA)
+        else:
+            # Draw from YOLO
+            with open(ann_path) as fp:
+                for idx, line in enumerate(fp):
+                    obj = line
+                    class_name, class_index, xmin, ymin, xmax, ymax = get_txt_object_data(obj, width, height)
+                    #print('{} {} {} {} {}'.format(class_index, xmin, ymin, xmax, ymax))
+                    img_objects.append([class_index, xmin, ymin, xmax, ymax])
+                    color = class_rgb[class_index].tolist()
+                    # draw bbox
+                    cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
+                    # draw resizing anchors if the object is selected
+                    if is_bbox_selected:
+                        if idx == selected_bbox:
+                            tmp_img = draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color)
+                    font = cv2.FONT_HERSHEY_SIMPLEX
+                    cv2.putText(tmp_img, class_name, (xmin, ymin - 5), font, 0.6, color, LINE_THICKNESS, cv2.LINE_AA)
     return tmp_img
 
 
