@@ -2,8 +2,6 @@ import numpy as np
 import tensorflow as tf
 
 
-
-
 class ObjectDetector(object):
     def __init__(self, graph_path, score_threshold, objIds):
         self.detection_graph = self._load_graph(graph_path)
