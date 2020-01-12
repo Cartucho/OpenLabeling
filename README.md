@@ -32,7 +32,7 @@ Image labeling in multiple annotation formats:
 To start using the YOLO Bounding Box Tool you need to [download the latest release](https://github.com/Cartucho/OpenLabeling/archive/v1.3.zip) or clone the repo:
 
 ```
-git clone https://github.com/Cartucho/OpenLabeling
+git clone --recurse-submodules git@github.com:Cartucho/OpenLabeling.git
 ```
 
 ### Prerequisites
