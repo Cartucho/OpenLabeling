@@ -90,6 +90,7 @@ def pointInRect(pX, pY, rX_left, rY_top, rX_right, rY_bottom):
     return rX_left <= pX <= rX_right and rY_top <= pY <= rY_bottom
 
 
+
 # Class to deal with bbox resizing
 class dragBBox:
     '''
@@ -238,8 +239,8 @@ def draw_line(img, x, y, height, width, color):
 def yolo_format(class_index, point_1, point_2, width, height):
     # YOLO wants everything normalized
     # Order: class x_center y_center x_width y_height
-    x_center = (point_1[0] + point_2[0]) / float(2.0 * width)
-    y_center = (point_1[1] + point_2[1]) / float(2.0 * height)
+    x_center = float((point_1[0] + point_2[0]) / (2.0 * width) )
+    y_center = float((point_1[1] + point_2[1]) / (2.0 * height))
     x_width = float(abs(point_2[0] - point_1[0])) / width
     y_height = float(abs(point_2[1] - point_1[1])) / height
     items = map(str, [class_index, x_center, y_center, x_width, y_height])
@@ -253,6 +254,18 @@ def voc_format(class_name, point_1, point_2):
     items = map(str, [class_name, xmin, ymin, xmax, ymax])
     return items
 
+def findIndex(obj_to_find):
+    #return [(ind, img_objects[ind].index(obj_to_find)) for ind in xrange(len(img_objects)) if item in img_objects[ind]]
+    ind = -1
+
+    ind_ = 0
+    for listElem in img_objects:
+        if listElem == obj_to_find:
+            ind = ind_
+            return ind
+        ind_ = ind_+1
+
+    return ind
 
 def write_xml(xml_str, xml_path):
     # remove blank text before prettifying the xml
@@ -325,10 +338,10 @@ def get_txt_object_data(obj, img_width, img_height):
 
     class_index = int(classId)
     class_name = CLASS_LIST[class_index]
-    xmin = int(img_width * (centerX - bbox_width/2))
-    xmax = int(img_width * (centerX + bbox_width/2))
-    ymin = int(img_height * (centerY - bbox_height/2 ))
-    ymax = int(img_height * (centerY + bbox_height/2))
+    xmin = int(img_width * centerX - img_width * bbox_width/2.0)
+    xmax = int(img_width * centerX + img_width * bbox_width/2.0)
+    ymin = int(img_height * centerY - img_height * bbox_height/2.0)
+    ymax = int(img_height * centerY + img_height * bbox_height/2.0)
     return [class_name, class_index, xmin, ymin, xmax, ymax]
 
 
@@ -538,17 +551,24 @@ def edit_bbox(obj_to_edit, action):
                     lines = old_file.readlines()
 
                 yolo_line = yolo_format(class_index, (xmin, ymin), (xmax, ymax), width, height) # TODO: height and width ought to be stored
+                ind = findIndex(obj_to_edit)
+                i=0
 
                 with open(ann_path, 'w') as new_file:
                     for line in lines:
-                        if line != yolo_line + '\n':
-                            new_file.write(line)
+
+                        if i != ind:
+                           new_file.write(line)
+
                         elif 'change_class' in action:
                             new_yolo_line = yolo_format(new_class_index, (xmin, ymin), (xmax, ymax), width, height)
                             new_file.write(new_yolo_line + '\n')
                         elif 'resize_bbox' in action:
                             new_yolo_line = yolo_format(class_index, (new_x_left, new_y_top), (new_x_right, new_y_bottom), width, height)
                             new_file.write(new_yolo_line + '\n')
+
+                        i=i+1
+
             elif '.xml' in ann_path:
                 # edit PASCAL VOC file
                 tree = ET.parse(ann_path)
