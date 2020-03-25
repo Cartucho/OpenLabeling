@@ -127,7 +127,7 @@ Mouse:
 
 ## Authors
 
-* **João Cartucho** - Please give me your feedback: to.cartucho@gmail.com
+* **João Cartucho**
 
     Feel free to contribute
 
