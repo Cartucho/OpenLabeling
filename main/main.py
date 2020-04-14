@@ -634,7 +634,7 @@ def mouse_listener(event, x, y, flags, param):
                 dragBBox.handler_left_mouse_down(x, y, img_objects[selected_bbox])
 
             if dragBBox.anchor_being_dragged is None:
-                if point_1[0] is -1:
+                if point_1[0] == -1:
                     if is_bbox_selected:
                         if is_mouse_inside_delete_button():
                             set_selected_bbox(set_class)
@@ -1099,11 +1099,11 @@ if __name__ == '__main__':
         if is_bbox_selected:
             tmp_img = draw_info_bb_selected(tmp_img)
         # if first click
-        if point_1[0] is not -1:
+        if point_1[0] != -1:
             # draw partial bbox
             cv2.rectangle(tmp_img, point_1, (mouse_x, mouse_y), color, LINE_THICKNESS)
             # if second click
-            if point_2[0] is not -1:
+            if point_2[0] != -1:
                 # save the bounding box
                 save_bounding_box(annotation_paths, class_index, point_1, point_2, width, height)
                 # reset the points
