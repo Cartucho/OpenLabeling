@@ -12,7 +12,6 @@ from tqdm import tqdm
 from lxml import etree
 import xml.etree.cElementTree as ET
 
-from dasiamrpn import dasiamrpn
 
 DELAY = 20 # keyboard delay (in milliseconds)
 WITH_QT = False
@@ -38,7 +37,7 @@ tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 
         CSRT -> More accurate than KCF but slightly slower (minimum OpenCV 3.4.2)
         MOSSE -> Less accurate than KCF but very fast (minimum OpenCV 3.4.1)
 '''
-parser.add_argument('--tracker', default='DASIAMRPN', type=str, help="tracker_type being used: ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']")
+parser.add_argument('--tracker', default='KCF', type=str, help="tracker_type being used: ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']")
 parser.add_argument('-n', '--n_frames', default='200', type=int, help='number of frames to track object for')
 args = parser.parse_args()
 
@@ -51,6 +50,9 @@ INPUT_DIR  = args.input_dir
 OUTPUT_DIR = args.output_dir
 N_FRAMES   = args.n_frames
 TRACKER_TYPE = args.tracker
+
+if TRACKER_TYPE == "DASIAMRPN":
+    from dasiamrpn import dasiamrpn
 
 WINDOW_NAME    = 'OpenLabeling'
 TRACKBAR_IMG   = 'Image'
