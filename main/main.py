@@ -729,7 +729,7 @@ def get_annotation_paths(img_path, annotation_formats):
     annotation_paths = []
     for ann_dir, ann_ext in annotation_formats.items():
         new_path = os.path.join(OUTPUT_DIR, ann_dir)
-        new_path = img_path.replace(INPUT_DIR, new_path, 1)
+        new_path = os.path.join(new_path, os.path.basename(os.path.normpath(img_path))) #img_path.replace(INPUT_DIR, new_path, 1)
         pre_path, img_ext = os.path.splitext(new_path)
         new_path = new_path.replace(img_ext, ann_ext, 1)
         annotation_paths.append(new_path)
