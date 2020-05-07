@@ -10,6 +10,20 @@ Image labeling in multiple annotation formats:
 <img src="https://media.giphy.com/media/l49JDgDSygJN369vW/giphy.gif" width="40%"><img src="https://media.giphy.com/media/3ohc1csRs9PoDgCeuk/giphy.gif" width="40%">
 <img src="https://media.giphy.com/media/3o752fXKwTJJkhXP32/giphy.gif" width="40%"><img src="https://media.giphy.com/media/3ohc11t9auzSo6fwLS/giphy.gif" width="40%">
 
+## Citation
+
+This project was developed for the following paper, please consider citing it:
+
+```bibtex
+@INPROCEEDINGS{8594067,
+  author={J. {Cartucho} and R. {Ventura} and M. {Veloso}},
+  booktitle={2018 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
+  title={Robust Object Recognition Through Symbiotic Deep Learning In Mobile Robots}, 
+  year={2018},
+  pages={2336-2341},
+}
+```
+
 ## Latest Features
 
 - Jun 2019: Deep Learning Object Detection Model
