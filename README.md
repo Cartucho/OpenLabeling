@@ -91,10 +91,12 @@ Step by step:
           -t, --thickness           Bounding box and cross line thickness (int) | Default: -t 1
           --tracker tracker_type    tracker_type being used: ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']
           -n N_FRAMES               number of frames to track object for
-  To use DASIAMRPN Tracker:
-  1. Install the [DaSiamRPN](https://github.com/foolwood/DaSiamRPN) submodule and download the model (VOT) from [google drive](https://drive.google.com/drive/folders/1BtIkp5pB6aqePQGlMb2_Z7bfPy6XEj6H)
-  2. copy it into 'DaSiamRPN/code/'
-  3. set default tracker in main.py or run it with --tracker DASIAMRPN
+  To use SiamMask Tracker:
+  1. Download the tracker model from [google drive](https://drive.google.com/drive/folders/1rkj6UHyNSUUtwi7FwTSqCAVxgESS6S3_?usp=sharing)
+  2. copy it into '/home/skoch/AutoLabeling/main/pysot/experiments/siamrpn_r50_l234_dwxcorr'
+  3. set default tracker in main.py or run it with --tracker SiamMask
+
+
 
 
 #### How to use the deep learning feature
