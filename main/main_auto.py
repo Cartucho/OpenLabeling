@@ -23,40 +23,31 @@ import re
 import cv2
 import numpy as np
 from tqdm import tqdm
+from shutil import copyfile
+
+
 from lxml import etree
 import xml.etree.cElementTree as ET
 import sys
 sys.path.insert(0, "..")
-from object_detection.tf_object_detection import ObjectDetector
+# from object_detection.tf_object_detection import ObjectDetector
 import configparser
+from siammask import SiamMask
+import torch
 
-#--------------INIT OBJECT DETECTOR---------------------
-# Read config
-config = configparser.ConfigParser()
-config.read('config.ini')
+# load class list
+def nonblank_lines(f):
+    for l in f:
+        line = l.rstrip()
+        if line:
+            yield line
 
-# Init device for using object detection
-os.environ['CUDA_VISIBLE_DEVICES'] = config['OBJECT_DETECTOR_PARAMETERS']['CUDA_VISIBLE_DEVICES']
+with open('class_list.txt') as f:
+    CLASS_LIST = list(nonblank_lines(f))
+#print(CLASS_LIST)
+last_class_index = len(CLASS_LIST) - 1
 
-#Get object detection parameters
-OBJECT_SCORE_THRESHOLD = float(config['OBJECT_DETECTOR_PARAMETERS']['OBJECT_SCORE_THRESHOLD'])
-OBJECT_IDS = config['OBJECT_DETECTOR_PARAMETERS']['OBJECT_IDS']
-OBJECT_IDS = [int (str) for str in OBJECT_IDS.split(",")]
-
-# # Path of object detection
-graph_model_path = "../object_detection/models/ssdlite_mobilenet_v2_coco_2018_05_09/frozen_inference_graph.pb"
-# graph_model_path = "../object_detection/models/mask_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
-# graph_model_path = "../object_detection/models/faster_rcnn_nas_coco_2018_01_28/frozen_inference_graph.pb"
-
-# Init object detector
-detector = ObjectDetector(graph_path=graph_model_path, score_threshold = OBJECT_SCORE_THRESHOLD,\
-                          objIds = OBJECT_IDS)
-
-#----------------END INIT OBJECT DETECTOR----------------------
-
-
-
-DELAY = 100 # keyboard delay (in milliseconds)
+DELAY = 20 # keyboard delay (in milliseconds)
 WITH_QT = False
 try:
     cv2.namedWindow('Test')
@@ -86,17 +77,29 @@ WINDOW_NAME = 'OpenLabeling'
 TRACKBAR_IMG = 'Image'
 TRACKBAR_CLASS = 'Class'
 
-annotation_formats = {'PASCAL_VOC' : '.xml', 'YOLO_darknet' : '.txt'}
+annotation_formats = {'Annotations' : '.txt'}
 TRACKER_DIR = os.path.join(OUTPUT_DIR, '.tracker')
+
+labeling_file = {} # dictionary which takes for every img entry: anchor_id,xmin,ymin,w,h,class_id,class_name
+labeling_file_dir = None
+curr_anchor_id = 0
 
 # selected bounding box
 prev_was_double_click = False
+is_bbox_selected = False
+selected_bbox = -1
 LINE_THICKNESS = args.thickness
 
 mouse_x = 0
 mouse_y = 0
 point_1 = (-1, -1)
 point_2 = (-1, -1)
+
+model = "../object_detection/efficientdet/trained_models/signatrix_efficientdet_coco.pth"
+detector = model = torch.load(model).module
+if torch.cuda.is_available():
+    model.cuda()
+
 
 
 
@@ -153,42 +156,14 @@ def draw_line(img, x, y, height, width, color):
     cv2.line(img, (0, y), (width, y), color, LINE_THICKNESS)
 
 
-def yolo_format(class_index, point_1, point_2, width, height):
-    # YOLO wants everything normalized
-    # Order: class x_center y_center x_width y_height
-    x_center = (point_1[0] + point_2[0]) / float(2.0 * width)
-    y_center = (point_1[1] + point_2[1]) / float(2.0 * height)
-    x_width = float(abs(point_2[0] - point_1[0])) / width
-    y_height = float(abs(point_2[1] - point_1[1])) / height
-    items = map(str, [class_index, x_center, y_center, x_width, y_height])
-    return ' '.join(items)
 
-
-def voc_format(class_name, point_1, point_2):
-    # Order: class_name xmin ymin xmax ymax
-    xmin, ymin = min(point_1[0], point_2[0]), min(point_1[1], point_2[1])
-    xmax, ymax = max(point_1[0], point_2[0]), max(point_1[1], point_2[1])
-    items = map(str, [class_name, xmin, ymin, xmax, ymax])
-    return items
-
-
-def write_xml(xml_str, xml_path):
-    # remove blank text before prettifying the xml
-    parser = etree.XMLParser(remove_blank_text=True)
-    root = etree.fromstring(xml_str, parser)
-    # prettify
-    xml_str = etree.tostring(root, pretty_print=True)
-    # save to file
-    with open(xml_path, 'wb') as temp_xml:
-        temp_xml.write(xml_str)
 
 
 def append_bb(ann_path, line, extension):
     if '.txt' in extension:
         with open(ann_path, 'a') as myfile:
             myfile.write(line + '\n') # append line
-    elif '.xml' in extension:
-        class_name, xmin, ymin, xmax, ymax = line
+   
 
         tree = ET.parse(ann_path)
         annotation = tree.getroot()
@@ -205,56 +180,65 @@ def append_bb(ann_path, line, extension):
         ET.SubElement(bbox, 'xmax').text = xmax
         ET.SubElement(bbox, 'ymax').text = ymax
 
-        xml_str = ET.tostring(annotation)
-        write_xml(xml_str, ann_path)
-
-
-def yolo_to_voc(x_center, y_center, x_width, y_height, width, height):
-    x_center *= float(width)
-    y_center *= float(height)
-    x_width *= float(width)
-    y_height *= float(height)
-    x_width /= 2.0
-    y_height /= 2.0
-    xmin = int(round(x_center - x_width))
-    ymin = int(round(y_center - y_height))
-    xmax = int(round(x_center + x_width))
-    ymax = int(round(y_center + y_height))
-    return xmin, ymin, xmax, ymax
-
 
 def draw_text(tmp_img, text, center, color, size):
     font = cv2.FONT_HERSHEY_SIMPLEX
     cv2.putText(tmp_img, text, center, font, 0.6, color, size, cv2.LINE_AA)
     return tmp_img
 
-
-def get_xml_object_data(obj):
-    class_name = obj.find('name').text
-    class_index = CLASS_LIST.index(class_name)
-    bndbox = obj.find('bndbox')
-    xmin = int(bndbox.find('xmin').text)
-    xmax = int(bndbox.find('xmax').text)
-    ymin = int(bndbox.find('ymin').text)
-    ymax = int(bndbox.find('ymax').text)
-    return [class_name, class_index, xmin, ymin, xmax, ymax]
-
-
-def draw_bboxes_from_file(tmp_img, annotation_paths, width, height):
-    global img_objects
+def draw_bboxes_from_dict(tmp_img, img_path, width, height):
+    global img_objects, is_bbox_selected, selected_bbox
     img_objects = []
-    ann_path = next(path for path in annotation_paths if 'PASCAL_VOC' in path)
-    if os.path.isfile(ann_path):
-        tree = ET.parse(ann_path)
-        annotation = tree.getroot()
-        for obj in annotation.findall('object'):
-            class_name, class_index, xmin, ymin, xmax, ymax = get_xml_object_data(obj)
-            #print('{} {} {} {} {}'.format(class_index, xmin, ymin, xmax, ymax))
-            img_objects.append([class_index, xmin, ymin, xmax, ymax])
+    ann_path = None
+    
+    # Drawing bounding boxes from the YOLO files
+    # ann_path = next(path for path in annotation_paths if 'YOLO_darknet' in path)
+    if labeling_file.get(img_path, None)!=None:
+        objs = labeling_file[img_path]
+        nested_list = any(isinstance(i, list) for i in objs)
+        if nested_list:
+            for idx,obj in enumerate(objs):
+                if len(obj)==0:
+                    continue
+                anchor_id,xmin, ymin, w, h, class_index, class_name = obj
+                # class_name = CLASS_LIST[class_index]
+                xmax = xmin+w
+                ymax = ymin+h
+
+                img_objects.append([anchor_id,xmin, ymin, xmax, ymax,class_index,CLASS_LIST[class_index]])
+                color = class_rgb[class_index].tolist()
+                # draw bbox
+                cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
+                # draw resizing anchors if the object is selected
+                if is_bbox_selected:
+                    if idx == selected_bbox:
+                        tmp_img = draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color)
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.putText(tmp_img, class_name+str(anchor_id), (xmin, ymin - 5), font, 0.6, color, LINE_THICKNESS, cv2.LINE_AA)
+        else:
+            if objs == []:
+                return tmp_img
+            anchor_id, xmin, ymin, w, h,class_index, class_name = objs
+            # class_name = CLASS_LIST[class_index]
+            xmax = xmin+w
+            ymax = ymin+h
+
+
+            img_objects.append([anchor_id,xmin, ymin, xmax, ymax,class_index,CLASS_LIST[class_index]])
             color = class_rgb[class_index].tolist()
+            # draw bbox
             cv2.rectangle(tmp_img, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
-            tmp_img = draw_text(tmp_img, class_name, (xmin, ymin - 5), color, LINE_THICKNESS)
+            # draw resizing anchors if the object is selected
+            if is_bbox_selected:
+                if 0 == selected_bbox:
+                    tmp_img = draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(tmp_img, class_name+str(anchor_id), (xmin, ymin - 5), font, 0.6, color, LINE_THICKNESS, cv2.LINE_AA)
+        
+            
     return tmp_img
+
+
 
 
 def get_bbox_area(x1, y1, x2, y2):
@@ -331,32 +315,55 @@ def get_annotation_paths(img_path, annotation_formats):
     return annotation_paths
 
 
-def create_PASCAL_VOC_xml(xml_path, abs_path, folder_name, image_name, img_height, img_width, depth):
-    # By: Jatin Kumar Mandav
-    annotation = ET.Element('annotation')
-    ET.SubElement(annotation, 'folder').text = folder_name
-    ET.SubElement(annotation, 'filename').text = image_name
-    ET.SubElement(annotation, 'path').text = abs_path
-    source = ET.SubElement(annotation, 'source')
-    ET.SubElement(source, 'database').text = 'Unknown'
-    size = ET.SubElement(annotation, 'size')
-    ET.SubElement(size, 'width').text = img_width
-    ET.SubElement(size, 'height').text = img_height
-    ET.SubElement(size, 'depth').text = depth
-    ET.SubElement(annotation, 'segmented').text = '0'
 
-    xml_str = ET.tostring(annotation)
-    write_xml(xml_str, xml_path)
+def read_darklabel_file(file_dir,img_path):
+    frame_number = img_path.split('_')[-1].replace('.jpg','')
+    f = open(file_dir,'r')
+    relevant_objs = []
+
+    for line in f:
+        objs = line.split('\n')[0].split(',')
+        if int(objs[0]) == int(frame_number):
+            frame_number = objs.pop(0)
+            class_name = objs.pop(-1)
+            objs = list(map(int, objs))
+            objs.append(class_name)
+            relevant_objs.append(objs)
+    # curr_anchor_id = max(relevant_objs,key=lambda o: o[0])
+    return relevant_objs
+
+def update_bounding_box(frame_path,anchor_id,class_index,xmin,ymin,xmax,ymax):
+    w= abs(xmax-xmin)
+    h = abs(ymax-ymin)
+    if labeling_file.get(frame_path,None)==None:
+        labeling_file[frame_path] = [[anchor_id, xmin,ymin,w,h,class_index,CLASS_LIST[class_index]]]
+    else:
+        if labeling_file[frame_path] == []:
+            labeling_file[frame_path] = [[anchor_id, xmin,ymin,w,h,class_index,CLASS_LIST[class_index]]]
+        else:
+           labeling_file[frame_path].append([anchor_id, xmin,ymin,w,h,class_index,CLASS_LIST[class_index]])    
 
 
-def save_bounding_box(annotation_paths, class_index, point_1, point_2, width, height):
-    for ann_path in annotation_paths:
-        if '.txt' in ann_path:
-            line = yolo_format(class_index, point_1, point_2, width, height)
-            append_bb(ann_path, line, '.txt')
-        elif '.xml' in ann_path:
-            line = voc_format(CLASS_LIST[class_index], point_1, point_2)
-            append_bb(ann_path, line, '.xml')
+def save_darklabel_txt(labeling_file_dir):
+    open(labeling_file_dir, "w")
+    with open(labeling_file_dir, "a+") as f:
+        for k in labeling_file.keys():
+            objs = labeling_file[k]
+            frame_number = k.split('_')[-1].replace('.jpg','')
+            nested_list = any(isinstance(i, list) for i in objs)
+            if nested_list:
+                for obj in objs:
+                    output_line = frame_number + ',' + ','.join(str(e) for e in obj)
+                    f.write(output_line)
+                    f.write("\n")
+            else:
+                if objs == []:
+                    continue
+                output_line = frame_number + ',' + ','.join(str(e) for e in objs)
+                f.write(output_line)
+                f.write("\n")
+
+        
 
 def is_frame_from_video(img_path):
     for video_name in VIDEO_NAME_DICT:
@@ -375,6 +382,20 @@ def get_json_file_data(json_file_path):
     else:
         return False, {'n_anchor_ids':0, 'frame_data_dict':{}}
 
+def update_json_anchor_id():
+    is_from_video, video_name = is_frame_from_video(img_path)
+    if is_from_video:
+        # get list of objects associated to that frame
+        object_list = img_objects[:]
+        # remove the objects in that frame that are already in the `.json` file
+        json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
+        if os.path.isfile(json_file_path):
+            with open(json_file_path) as f:
+                data = json.load(f)
+                anchor_id = data['n_anchor_ids']
+                data.update({'n_anchor_ids': (anchor_id + 1)})
+
+
 
 def get_prev_frame_path_list(video_name, img_path):
     first_index = VIDEO_NAME_DICT[video_name]['first_index']
@@ -392,13 +413,26 @@ def get_next_frame_path_list(video_name, img_path):
 
 def get_json_object_dict(obj, json_object_list):
     if len(json_object_list) > 0:
-        class_index, xmin, ymin, xmax, ymax = map(int, obj)
+        class_name = obj.pop(-1)
+        anchor_idx,xmin, ymin, xmax, ymax,class_index = map(int, obj)
+        obj.append(class_name)
         for d in json_object_list:
                     if ( d['class_index'] == class_index and
                          d['bbox']['xmin'] == xmin and
                          d['bbox']['ymin'] == ymin and
                          d['bbox']['xmax'] == xmax and
                          d['bbox']['ymax'] == ymax ) :
+                        return d
+    return None
+
+def get_json_object_dict_percent(obj, json_object_list):
+    if len(json_object_list) > 0:
+        class_name = obj.pop(-1)
+        anchor_idx,xmin, ymin, xmax, ymax,class_index = map(int, obj)
+        obj.append(class_name)
+        for d in json_object_list:
+                    if ( d['class_index'] == class_index and
+                         overlap_percent(obj,d))>0.01 :
                         return d
     return None
 
@@ -409,17 +443,49 @@ def remove_already_tracked_objects(object_list, img_path, json_file_data):
     # copy the list since we will be deleting elements without restarting the loop
     temp_object_list = object_list[:]
     for obj in temp_object_list:
-        obj_dict = get_json_object_dict(obj, json_object_list)
+        obj_dict = get_json_object_dict_percent(obj, json_object_list)
         if obj_dict is not None:
             object_list.remove(obj)
-            json_object_list.remove(obj_dict)
+            # json_object_list.remove(obj_dict)
     return object_list
 
+def overlap_percent(obj,json_obj2):
+    obj1 = obj[1:5]
+    obj2 = [json_obj2['bbox']['xmin'],json_obj2['bbox']['ymin'],json_obj2['bbox']['xmax'],json_obj2['bbox']['ymax']]
+    SA=(obj1[0]-obj1[2])*(obj1[1]-obj1[3])
+    SB=(obj2[0]-obj2[2])*(obj2[1]-obj2[3])
+    SI=(max(0,-(max(obj1[0],obj2[0])-min(obj1[2],obj2[2])))) * (max(0,-(max(obj1[1],obj2[1])-min(obj1[3],obj2[3]))))
+    # A_overlap=(max(obj1[0],obj2[0])-min(obj1[2],obj2[2]))*(max(obj1[1],obj2[1])-min(obj1[3],obj2[3]))
+    # p_overlap = abs(A_overlap/(A1+A2-A_overlap))
+    # p_overlap = abs(A_overlap/A1)
+    SU = SA+SB-SI
+
+    return SI/SU
+
+def overlap_percent_bbox(obj1,obj2):
+    # obj1 = obj[1:5]
+    # obj2 = obj_[1:5]
+    SA=(obj1[0]-obj1[2])*(obj1[1]-obj1[3])
+    SB=(obj2[0]-obj2[2])*(obj2[1]-obj2[3])
+    SI=(max(0,-(max(obj1[0],obj2[0])-min(obj1[2],obj2[2])))) * (max(0,-(max(obj1[1],obj2[1])-min(obj1[3],obj2[3]))))
+    # A_overlap=(max(obj1[0],obj2[0])-min(obj1[2],obj2[2]))*(max(obj1[1],obj2[1])-min(obj1[3],obj2[3]))
+    # p_overlap = abs(A_overlap/(A1+A2-A_overlap))
+    # p_overlap = abs(A_overlap/A1)
+    SU = SA+SB-SI
+
+    return SI/SU
 
 def get_json_file_object_by_id(json_object_list, anchor_id):
     for obj_dict in json_object_list:
         if obj_dict['anchor_id'] == anchor_id:
             return obj_dict
+    return None
+
+def get_json_file_object_by_exact_dicription(json_object_list, object_to_edit):
+    for obj_dict in json_object_list:
+        if obj_dict ==object_to_edit:
+            return obj_dict
+        
     return None
 
 
@@ -432,7 +498,7 @@ def get_json_file_object_list(img_path, frame_data_dict):
 
 def json_file_add_object(frame_data_dict, img_path, anchor_id, pred_counter, obj):
     object_list = get_json_file_object_list(img_path, frame_data_dict)
-    class_index, xmin, ymin, xmax, ymax = obj
+    anchor_id_, xmin, ymin, xmax, ymax,class_index,class_name = obj
 
     bbox = {
       'xmin': xmin,
@@ -506,7 +572,7 @@ class TrackerManager:
     # TODO: press ESC to stop the tracking process
 
     def __init__(self, tracker_type, init_frame, next_frame_path_list):
-        tracker_types = ['CSRT', 'KCF', 'MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN']
+        tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN','SiamMask']
         ''' Recomended tracker_type:
               KCF -> KCF is usually very good (minimum OpenCV 3.1.0)
               CSRT -> More accurate than KCF but slightly slower (minimum OpenCV 3.4.2)
@@ -514,7 +580,9 @@ class TrackerManager:
         '''
         self.tracker_type = tracker_type
         # -- TODO: remove this if I assume OpenCV version > 3.4.0
-        if tracker_type == tracker_types[0] or tracker_type == tracker_types[2]:
+        if tracker_type == 'SiamMask':
+            self.tracker_type = 'SiamMask'
+        elif tracker_type == tracker_types[0] or tracker_type == tracker_types[2]:
             if int(self.major_ver == 3) and int(self.minor_ver) < 4:
                 self.tracker_type = tracker_types[1]  # Use KCF instead of CSRT or MOSSE
         # --
@@ -522,6 +590,7 @@ class TrackerManager:
         self.next_frame_path_list = next_frame_path_list
         self.trackers = []
         self.img_h, self.img_w = init_frame.shape[:2]
+        self.tracker_data =[]
 
 
     '''
@@ -533,29 +602,42 @@ class TrackerManager:
         anchor_id = json_file_data['n_anchor_ids']
         frame_data_dict = json_file_data['frame_data_dict']
         image = cv2.imread(img_path)
+        # iii=0
         for box, classId in zip(bboxes, classIds):
+            # print(f"new tracker {iii}")
+            # iii+=1
             # Init trackers with those classId and anchorId
             anchor_id = anchor_id + 1
-            tracker = Tracker(self.tracker_type, anchorId=anchor_id, classId=classId)
-            initial_bbox = (box[0], box[1], box[2], box[3])
-            tracker.instance.init(self.init_frame, initial_bbox)
+            if self.tracker_type == 'SiamMask':
+                
+                initial_bbox = (box[0], box[1], box[2], box[3])
+                tracker = SiamMask(anchorid=anchor_id, classid=classId,init_frame=self.init_frame,init_bbox=initial_bbox)
+                data = [anchor_id,classId,self.init_frame,initial_bbox]
+                tracker.init(self.init_frame,initial_bbox)
+            else:
+                tracker = Tracker(self.tracker_type, anchorId=anchor_id, classId=classId)
+                initial_bbox = (box[0], box[1], box[2], box[3])
+                tracker.instance.init(self.init_frame, initial_bbox)
             self.trackers.append(tracker)
+            # self.tracker_data.append(data)
 
             # Initialize trackers on json files.
             pred_counter  = 0
             xmin, ymin, w, h = map(int, box)
             xmax = xmin + w
             ymax = ymin + h
-            obj = [int(classId), xmin, ymin, xmax, ymax]
+            obj = [anchor_id, xmin, ymin, xmax, ymax,int(classId),CLASS_LIST[int(classId)]]
             frame_data_dict = json_file_add_object(frame_data_dict, img_path, anchor_id, pred_counter, obj)
 
             # Save prediction
             annotation_paths = get_annotation_paths(img_path, annotation_formats)
-            save_bounding_box(annotation_paths, int(classId), (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
+            # save_bounding_box(annotation_paths, int(classId), (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
+            update_bounding_box(img_path,anchor_id,int(classId),xmin,ymin,xmax,ymax)
 
 
 
             #Draw
+            # color = class_rgb[int(data[1])].tolist()
             color = class_rgb[int(tracker.classId)].tolist()
             cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
 
@@ -569,6 +651,7 @@ class TrackerManager:
         # save the updated data
         with open(json_file_path, 'w') as outfile:
             json.dump(json_file_data, outfile, sort_keys=True, indent=4)
+        save_darklabel_txt(labeling_file_dir)
 
 
     def predict_next_frames(self,json_file_data,json_file_path):
@@ -584,7 +667,10 @@ class TrackerManager:
             # Check if there is any "miss" tracker
             for tracker in self.trackers:
                 next_image = cv2.imread(frame_path)
-                success, bbox = tracker.instance.update(next_image.copy())
+                if self.tracker_type=='SiamMask':
+                    success, bbox  = tracker.update(next_image.copy())
+                else:
+                    success, bbox = tracker.instance.update(next_image.copy())
                 bboxes.append(bbox)
                 if not success:
                     is_there_missed_tracker = True
@@ -599,7 +685,8 @@ class TrackerManager:
                     xmin, ymin, w, h = map(int, box)
                     xmax = xmin + w
                     ymax = ymin + h
-                    obj = [int(tracker.classId), xmin, ymin, xmax, ymax]
+                    # obj = [int(tracker.classId), xmin, ymin, xmax, ymax]
+                    obj = [int(tracker.anchorId), xmin, ymin, xmax, ymax,int(tracker.classId),CLASS_LIST[int(tracker.classId)]]
                     frame_data_dict = json_file_add_object(frame_data_dict, frame_path, int(tracker.anchorId), pred_counter, obj)
 
                     color = class_rgb[int(tracker.classId)].tolist()
@@ -607,8 +694,8 @@ class TrackerManager:
 
                     # save prediction
                     annotation_paths = get_annotation_paths(frame_path, annotation_formats)
-                    save_bounding_box(annotation_paths, int(tracker.classId), (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
-
+                    # save_bounding_box(annotation_paths, int(tracker.classId), (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
+                    update_bounding_box(frame_path,tracker.anchorId,int(tracker.classId),xmin,ymin,xmax,ymax)
 
 
                 cv2.imshow(WINDOW_NAME, next_image)
@@ -626,8 +713,48 @@ class TrackerManager:
         # save the updated data
         with open(json_file_path, 'w') as outfile:
             json.dump(json_file_data, outfile, sort_keys=True, indent=4)
+        save_darklabel_txt(labeling_file_dir)
 
+    def predict_next_frames2(self,json_file_data,json_file_path):
+        global img_index
 
+        anchor_id = json_file_data['n_anchor_ids']
+        frame_data_dict = json_file_data['frame_data_dict']
+
+        pred_counter = 0
+        for data in self.tracker_data:
+            tracker = SiamMask(anchorid=data[0], classid=data[1],init_frame=data[2],init_bbox=data[3])
+            tracker.init_reinit()
+            bboxes = []
+            frame_paths = []
+            for frame_path in self.next_frame_path_list:
+                
+                # Check if there is any "miss" tracker
+                next_image = cv2.imread(frame_path)
+                success, bbox  = tracker.update(next_image.copy())
+                if success:
+                    pred_counter += 1
+                    # xmin, ymin, w, h = map(int, bbox)
+                    xmin,ymin,w,h=bbox
+                    xmax = xmin + w
+                    ymax = ymin + h
+                    obj = [class_index, xmin, ymin, xmax, ymax]
+                    frame_data_dict = json_file_add_object(frame_data_dict, frame_path, anchor_id, pred_counter, obj)
+                    cv2.rectangle(next_image, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
+                    # save prediction
+                    annotation_paths = get_annotation_paths(frame_path, annotation_formats)
+                    save_bounding_box(annotation_paths, class_index, (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
+                    # show prediction
+                    cv2.imshow(WINDOW_NAME, next_image)
+                    pressed_key = cv2.waitKey(DELAY)
+                else:
+                    break
+            del tracker
+
+            json_file_data.update({'n_anchor_ids': (anchor_id + 1)})
+            # save the updated data
+            with open(json_file_path, 'w') as outfile:
+                json.dump(json_file_data, outfile, sort_keys=True, indent=4)
 
 
 # change to the directory of this script
@@ -666,18 +793,26 @@ for f in sorted(os.listdir(INPUT_DIR), key = natural_sort_key):
             IMAGE_PATH_LIST.extend((os.path.join(video_frames_path, frame) for frame in frame_list))
 last_img_index = len(IMAGE_PATH_LIST) - 1
 
-# create output directories
+
 if len(VIDEO_NAME_DICT) > 0:
     if not os.path.exists(TRACKER_DIR):
         os.makedirs(TRACKER_DIR)
-for ann_dir in annotation_formats:
-    new_dir = os.path.join(OUTPUT_DIR, ann_dir)
-    if not os.path.exists(new_dir):
-        os.makedirs(new_dir)
-    for video_name_ext in VIDEO_NAME_DICT:
-        new_video_dir = os.path.join(new_dir, video_name_ext)
-        if not os.path.exists(new_video_dir):
-            os.makedirs(new_video_dir)
+    for ann_dir in annotation_formats:
+        new_dir = os.path.join(OUTPUT_DIR, ann_dir)
+        if not os.path.exists(new_dir):
+            os.makedirs(new_dir)
+        for video_name_ext in VIDEO_NAME_DICT:
+            new_video_dir = os.path.join(new_dir, video_name_ext)
+            labeling_file_dir = new_video_dir + '/labeling_file.txt'
+            if not os.path.exists(new_video_dir):
+                os.makedirs(new_video_dir)
+
+                open(labeling_file_dir, 'a').close()
+            else:
+                copyfile(labeling_file_dir, labeling_file_dir[:-4]+'_backup.txt')
+                for img_path in IMAGE_PATH_LIST:
+                    labeling_file[img_path] = read_darklabel_file(labeling_file_dir,img_path)
+                # set_max_anchor()
 
 # create empty annotation files for each image, if it doesn't exist already
 for img_path in IMAGE_PATH_LIST:
@@ -688,13 +823,7 @@ for img_path in IMAGE_PATH_LIST:
     image_name = os.path.basename(img_path)
     img_height, img_width, depth = (str(number) for number in test_img.shape)
 
-    for ann_path in get_annotation_paths(img_path, annotation_formats):
-        if not os.path.isfile(ann_path):
-            if '.txt' in ann_path:
-                open(ann_path, 'a').close()
-            elif '.xml' in ann_path:
-                create_PASCAL_VOC_xml(ann_path, abs_path, folder_name, image_name, img_height, img_width, depth)
-
+    
 # load class list
 with open('class_list.txt') as f:
     CLASS_LIST = list(nonblank_lines(f))
@@ -731,6 +860,7 @@ edges_on = False
 display_text('Welcome!\n Press [h] for help.', 4000)
 
 # loop
+made_detection = False
 while True:
     if is_last_frame:
         print("Reach to the last frame!!!!")
@@ -753,7 +883,8 @@ while True:
     annotation_paths = get_annotation_paths(img_path, annotation_formats)
 
     # draw already done bounding boxes
-    tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width, height)
+    # tmp_img = draw_bboxes_from_file(tmp_img, annotation_paths, width, height)
+    tmp_img = draw_bboxes_from_dict(tmp_img,img_path, width, height)
 
 
     """ Algorithms for automatically labeling!!!!!!!
@@ -765,9 +896,44 @@ while True:
     """
 
     # Using object detection to find PEOPLE
-    print("Using people detection!!!!")
+    print("Using Detector!!!!")
     im_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    boxes, confidences, classIds =  detector.detect(im_rgb)
+    # boxes, confidences, classIds =  detector.detect(im_rgb)
+    image_size = 1024
+    height, width = im_rgb.shape[:2]
+    image = im_rgb.astype(np.float32) / 255
+    image[:, :, 0] = (image[:, :, 0] - 0.485) / 0.229
+    image[:, :, 1] = (image[:, :, 1] - 0.456) / 0.224
+    image[:, :, 2] = (image[:, :, 2] - 0.406) / 0.225
+    if height > width:
+        scale = image_size / height
+        resized_height = image_size
+        resized_width = int(width * scale)
+    else:
+        scale = image_size / width
+        resized_height = int(height * scale)
+        resized_width = image_size
+
+    image = cv2.resize(image, (resized_width, resized_height))
+
+    new_image = np.zeros((image_size, image_size, 3))
+    new_image[0:resized_height, 0:resized_width] = image
+    new_image = np.transpose(new_image, (2, 0, 1))
+    new_image = new_image[None, :, :, :]
+    new_image = torch.Tensor(new_image)
+    if torch.cuda.is_available():
+        new_image = new_image.cuda()
+    with torch.no_grad():
+        confidences, classIds, boxes = detector(new_image) # boxes are xmin ymin xmax ymax
+        boxes /= scale
+    boxes[:,2]=boxes[:,2]-boxes[:,0] # we need x y w h
+    boxes[:,3]=boxes[:,3]-boxes[:,1]
+    boxes=boxes[confidences>0.7].cpu() 
+    classIds=classIds[confidences>0.7].cpu()
+    confidences=confidences[confidences>0.7].cpu()
+
+    # new_boxes = boxes[:,:]
+
 
     if not len(boxes):
         cv2.imshow(WINDOW_NAME, tmp_img)
@@ -776,7 +942,16 @@ while True:
         cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
 
     else:
-        print("Using tracker!!!!")
+
+        # object_list = []
+        object_list=img_objects[:]
+        for box,index in zip(boxes,classIds):
+            overlap = False
+            for img_box in object_list:
+                if  index== img_box[-2] and overlap_percent_bbox([int(box[0]),int(box[1]), (int(box[0]) + int(box[2])),(int(box[1]) + int(box[3]))],[int(img_box[1]),int(img_box[2]), int(img_box[3]),int(img_box[4])])>0.5:
+                    overlap=True
+            if overlap == False:
+                object_list.append([999,int(box[0]),int(box[1]), (int(box[0]) + int(box[2])),(int(box[1]) + int(box[3])),int(index),CLASS_LIST[index]])
         current_img_path = IMAGE_PATH_LIST[img_index]
         is_from_video, video_name = is_frame_from_video(current_img_path)
 
@@ -787,14 +962,39 @@ while True:
             file_exists, json_file_data = get_json_file_data(json_file_path)
             init_frame = img.copy()
 
-            tracker_manager = TrackerManager('KCF', init_frame, next_frame_path_list)
-            tracker_manager.init_trackers(boxes, classIds, json_file_data, json_file_path, current_img_path)
-            tracker_manager.predict_next_frames(json_file_data,json_file_path)
+            # remove the objects in that frame that are already in the `.json` file
+            json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
+            file_exists, json_file_data = get_json_file_data(json_file_path)
+            if file_exists:
+                object_list = remove_already_tracked_objects(object_list, img_path, json_file_data)
+            if len(object_list) > 0:
+                print("Using tracker!!!!")
+                tracker_manager = TrackerManager('SiamMask', init_frame, next_frame_path_list)
+                new_boxes_max = np.asarray([object_[1:5] for object_ in object_list])
+                new_classIds = [object_[-2] for object_ in object_list]
+
+                new_boxes_max[:,2]=new_boxes_max[:,2]-new_boxes_max[:,0] # we need x y w h
+                new_boxes_max[:,3]=new_boxes_max[:,3]-new_boxes_max[:,1]
+                new_boxes = new_boxes_max.tolist()
+                # ne
+                # I have to restructure this, instead of initation 100s of trackers and then predicting
+                tracker_manager.init_trackers(new_boxes, new_classIds, json_file_data, json_file_path, current_img_path)
+                tracker_manager.predict_next_frames(json_file_data,json_file_path)
+            else:
+                img_index = increase_index(img_index, last_img_index)
+                cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+
+                cv2.imshow(WINDOW_NAME, tmp_img)
+                pressed_key = cv2.waitKey(DELAY)
+
 
         else: # If it is image
             for box, classId in zip(boxes, classIds):
-                save_bounding_box(annotation_paths, classId, (int(box[0]), int(box[1])),
-                                  (int(box[0]) + int(box[2]), int(box[1]) + int(box[3])), width, height)
+                # save_bounding_box(annotation_paths, classId, (int(box[0]), int(box[1])),
+                #                   (int(box[0]) + int(box[2]), int(box[1]) + int(box[3])), width, height)
+                update_bounding_box(img_path,curr_anchor_id,classId,(int(box[0]),int(box[1])), (int(box[0]) + int(box[2]),int(box[1]) + int(box[3])))
+                curr_anchor_id+=1
+                save_darklabel_txt(labeling_file_dir)
 
                 xmin, ymin, w, h = map(int, box)
                 xmax = xmin + w
