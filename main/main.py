@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 from shutil import copyfile
+import torch
 
 
 from lxml import etree
@@ -21,7 +22,7 @@ def nonblank_lines(f):
         if line:
             yield line
 
-with open('main/class_list.txt') as f:
+with open('class_list.txt') as f:
     CLASS_LIST = list(nonblank_lines(f))
 #print(CLASS_LIST)
 last_class_index = len(CLASS_LIST) - 1
@@ -35,6 +36,7 @@ try:
 except cv2.error:
     print('-> Please ignore this error message\n')
 cv2.destroyAllWindows()
+
 
 
 parser = argparse.ArgumentParser(description='Open-source image labeling tool')
@@ -52,7 +54,15 @@ tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 
 '''
 parser.add_argument('--tracker', default='KCF', type=str, help="tracker_type being used: ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN', 'SiamMask']")
 parser.add_argument('-n', '--n_frames', default='200', type=int, help='number of frames to track object for')
+parser.add_argument('-d', '--detector', default='../object_detection/efficientdet/trained_models/signatrix_efficientdet_coco.pth', type=str, help='Detector model dir')
 args = parser.parse_args()
+
+model = args.detector
+if torch.cuda.is_available():
+    detector = torch.load(model).module
+    model.cuda()
+else:
+    detector = torch.load(model,map_location='cpu').module
 
 class_index = 0
 img_index = 0
@@ -632,7 +642,18 @@ def convert_video_to_images(video_path, n_frames, desired_img_format):
     return file_path, video_name_ext
 
 
+def overlap_percent_bbox(obj1,obj2):
+    # obj1 = obj[1:5]
+    # obj2 = obj_[1:5]
+    SA=(obj1[0]-obj1[2])*(obj1[1]-obj1[3])
+    SB=(obj2[0]-obj2[2])*(obj2[1]-obj2[3])
+    SI=(max(0,-(max(obj1[0],obj2[0])-min(obj1[2],obj2[2])))) * (max(0,-(max(obj1[1],obj2[1])-min(obj1[3],obj2[3]))))
+    # A_overlap=(max(obj1[0],obj2[0])-min(obj1[2],obj2[2]))*(max(obj1[1],obj2[1])-min(obj1[3],obj2[3]))
+    # p_overlap = abs(A_overlap/(A1+A2-A_overlap))
+    # p_overlap = abs(A_overlap/A1)
+    SU = SA+SB-SI
 
+    return SI/SU
 
 def get_annotation_paths(img_path, annotation_formats):
     annotation_paths = []
@@ -1160,6 +1181,47 @@ if __name__ == '__main__':
                             class_index = obj[-2]
                             color = class_rgb[class_index].tolist()
                             label_tracker.start_tracker(json_file_data, json_file_path, img_path, obj, color, annotation_formats)
+            elif pressed_key == ord('o'):
+                im_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                # boxes, confidences, classIds =  detector.detect(im_rgb)
+                image_size = 1024
+                height, width = im_rgb.shape[:2]
+                image = im_rgb.astype(np.float32) / 255
+                image[:, :, 0] = (image[:, :, 0] - 0.485) / 0.229
+                image[:, :, 1] = (image[:, :, 1] - 0.456) / 0.224
+                image[:, :, 2] = (image[:, :, 2] - 0.406) / 0.225
+                if height > width:
+                    scale = image_size / height
+                    resized_height = image_size
+                    resized_width = int(width * scale)
+                else:
+                    scale = image_size / width
+                    resized_height = int(height * scale)
+                    resized_width = image_size
+
+                image = cv2.resize(image, (resized_width, resized_height))
+
+                new_image = np.zeros((image_size, image_size, 3))
+                new_image[0:resized_height, 0:resized_width] = image
+                new_image = np.transpose(new_image, (2, 0, 1))
+                new_image = new_image[None, :, :, :]
+                new_image = torch.Tensor(new_image)
+                if torch.cuda.is_available():
+                    new_image = new_image.cuda()
+                with torch.no_grad():
+                    confidences, classIds, boxes = detector(new_image) # boxes are xmin ymin xmax ymax
+                    boxes /= scale
+                boxes[:,2]=boxes[:,2]-boxes[:,0] # we need x y w h
+                boxes[:,3]=boxes[:,3]-boxes[:,1]
+                boxes=boxes[confidences>0.7].cpu() 
+                classIds=classIds[confidences>0.7].cpu()
+                confidences=confidences[confidences>0.7].cpu()
+                if  len(boxes)>0:
+                    # object_list=img_objects[:]
+                    for box,class_ in zip(boxes,classIds):
+                        update_bounding_box(img_path,curr_anchor_id,class_index,int(box[0]),int(box[1]),(int(box[0]) + int(box[2])),(int(box[1]) + int(box[3])))
+                        curr_anchor_id+=1
+
             # quit key listener
             elif pressed_key == ord('q'):
                 save_darklabel_txt(labeling_file_dir)
