@@ -434,7 +434,7 @@ def get_json_object_dict_percent(obj, json_object_list):
         obj.append(class_name)
         for d in json_object_list:
                     if ( d['class_index'] == class_index and
-                         overlap_percent(obj,d))>0.01 :
+                         overlap_percent(obj,d))>0.4 :
                         return d
     return None
 
