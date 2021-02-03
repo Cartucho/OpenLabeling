@@ -96,9 +96,11 @@ point_1 = (-1, -1)
 point_2 = (-1, -1)
 
 model = "../object_detection/efficientdet/trained_models/signatrix_efficientdet_coco.pth"
-detector = model = torch.load(model).module
 if torch.cuda.is_available():
+    detector = torch.load(model).module
     model.cuda()
+else:
+    detector = torch.load(model,map_location='cpu').module
 
 
 
@@ -860,9 +862,15 @@ edges_on = False
 display_text('Welcome!\n Press [h] for help.', 4000)
 
 # loop
-made_detection = False
+new_track = False
 while True:
-    if is_last_frame:
+    if is_last_frame and new_track:
+        print("Reach to the last frame!!!!")
+        new_track = False
+        is_last_frame = False
+        set_img_index(0)
+        continue
+    elif is_last_frame:
         print("Reach to the last frame!!!!")
         break
 
@@ -944,6 +952,7 @@ while True:
     else:
 
         # object_list = []
+        
         object_list=img_objects[:]
         for box,index in zip(boxes,classIds):
             overlap = False
@@ -968,6 +977,7 @@ while True:
             if file_exists:
                 object_list = remove_already_tracked_objects(object_list, img_path, json_file_data)
             if len(object_list) > 0:
+                new_track =True
                 print("Using tracker!!!!")
                 tracker_manager = TrackerManager('SiamMask', init_frame, next_frame_path_list)
                 new_boxes_max = np.asarray([object_[1:5] for object_ in object_list])
