@@ -10,10 +10,10 @@ import numpy as np
 from tqdm import tqdm
 from shutil import copyfile
 import torch
+from centernet_better.train import CenterNetBetterModule
 
 
-from lxml import etree
-import xml.etree.cElementTree as ET
+
 
 # load class list
 def nonblank_lines(f):
@@ -22,8 +22,13 @@ def nonblank_lines(f):
         if line:
             yield line
 
-with open('class_list.txt') as f:
+with open('/home/skoch/AutoLabeling/main/class_list.txt') as f:
     CLASS_LIST = list(nonblank_lines(f))
+
+CLASSES_INDEX = {}
+for i in range(len(CLASS_LIST)):
+    CLASSES_INDEX[CLASS_LIST[i]] = i
+
 #print(CLASS_LIST)
 last_class_index = len(CLASS_LIST) - 1
 
@@ -42,7 +47,7 @@ cv2.destroyAllWindows()
 parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
 parser.add_argument('-o', '--output_dir', default='output', type=str, help='Path to output directory')
-parser.add_argument('-t', '--thickness', default='1', type=int, help='Bounding box and cross line thickness')
+parser.add_argument('-t', '--thickness', default='2', type=int, help='Bounding box and cross line thickness')
 # parser.add_argument('--draw-from-PASCAL-files', action='store_true', help='Draw bounding boxes from the PASCAL files') # default YOLO
 '''
 tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']
@@ -58,9 +63,10 @@ parser.add_argument('-d', '--detector', default='../object_detection/efficientde
 args = parser.parse_args()
 
 model = args.detector
+model = '/home/skoch/AutoLabeling/main/crow/epoch=46-step=17342.ckpt'
 if torch.cuda.is_available():
-    detector = torch.load(model).module
-    model.cuda()
+    detector = CenterNetBetterModule.load_from_checkpoint(model, pretrained_checkpoints_path=None)
+    detector = detector.cuda()
 else:
     detector = torch.load(model,map_location='cpu').module
 
@@ -328,7 +334,8 @@ def draw_bboxes_from_dict(tmp_img, img_path, width, height):
             for idx,obj in enumerate(objs):
                 if len(obj)==0:
                     continue
-                anchor_id,xmin, ymin, w, h, class_index, class_name = obj
+                anchor_id,xmin, ymin, w, h, class_index,class_name = obj
+                # class_index = CLASSES_INDEX[class_name]
                 # class_name = CLASS_LIST[class_index]
                 xmax = xmin+w
                 ymax = ymin+h
@@ -458,12 +465,12 @@ def edit_bbox(obj_to_edit, action):
                 # update json file if contain the same anchor_id
                 for frame_path in frame_path_list:
                     json_object_list = get_json_file_object_list(frame_path, frame_data_dict)
-                    if 'delete_recursive' in action and int(img_path.split('_')[-1].replace('.jpg',''))>=int(current_img_path.split('_')[-1].replace('.jpg','')):
+                    if (('delete_recursive' in action or 'change_class' in action) 
+                            and int(img_path.split('_')[-1].replace('.jpg',''))>=int(current_img_path.split('_')[-1].replace('.jpg',''))):
                         json_obj = get_json_file_object_by_id(json_object_list, anchor_id) 
                     else:
                         json_obj = get_json_file_object_by_exact_dicription(json_object_list, obj_matched)
                     if json_obj is not None:
-      
                         # edit json file
                         if 'delete' in action:
                             json_object_list.remove(json_obj)
@@ -478,8 +485,8 @@ def edit_bbox(obj_to_edit, action):
                         break
 
                 # save the edited data
-                with open(json_file_path, 'w') as outfile:
-                    json.dump(json_file_data, outfile, sort_keys=True, indent=4)
+                # with open(json_file_path, 'w') as outfile:
+                #     json.dump(json_file_data, outfile, sort_keys=True, indent=4)
 
     # 3. loop through bboxes_to_edit_dict and edit the corresponding annotation files
     for path in bboxes_to_edit_dict:
@@ -492,10 +499,32 @@ def edit_bbox(obj_to_edit, action):
         nested_list = any(isinstance(d, list) for d in labeling_file[current_img_path])
         
         if 'delete_recursive' in action:
-            for frame in frame_path_list:
-                labeling_file[frame].pop(selected_bbox)
-                if labeling_file[frame]==[]:
-                    del labeling_file[frame]
+            labeling_file[current_img_path].pop(selected_bbox)
+            if labeling_file[current_img_path]==[]:
+                del labeling_file[current_img_path]
+            next_frames = get_next_frame_path_list(video_name, current_img_path)
+            for frame in next_frames:
+                # continue_delete = False
+                # try:
+                #     obj = labeling_file[frame][selected_bbox]
+                #     if obj[0] != anchor_id:
+                #         continue
+                # except Exception:
+                #     break
+                # labeling_file[frame].pop(selected_bbox)
+                # if labeling_file[frame]==[]:
+                #     del labeling_file[frame]
+                delete_index=-1
+                for i,obj in enumerate(labeling_file[frame]):
+                # continue_delete = False
+                    if obj[0] == anchor_id:
+                        delete_index = i
+                        break
+                if delete_index !=-1:
+                    if labeling_file[frame][delete_index][0] == anchor_id:
+                        labeling_file[frame].pop(delete_index)
+                        if labeling_file[frame]==[]:
+                            del labeling_file[frame]
         elif 'delete' in action:
             labeling_file[current_img_path].pop(selected_bbox)
             if labeling_file[current_img_path]==[]:
@@ -504,9 +533,20 @@ def edit_bbox(obj_to_edit, action):
 
         elif 'change_class' in action:
             if nested_list:
-                labeling_file[current_img_path][selected_bbox]= [curr_anchor_id,xmin,ymin,w,h,new_class_index,CLASS_LIST[new_class_index]]
+                labeling_file[current_img_path][selected_bbox] = [curr_anchor_id,xmin,ymin,w,h,new_class_index,CLASS_LIST[new_class_index]]
             else:
                 labeling_file[current_img_path]= [curr_anchor_id,xmin,ymin,w,h,new_class_index,CLASS_LIST[new_class_index]]
+            next_frames = get_next_frame_path_list(video_name, current_img_path)
+            for frame in next_frames:
+                if nested_list:
+                    for i in range(len(labeling_file[frame])):
+                        if labeling_file[frame][i][0] == anchor_id:
+                            next_anchor_id,next_xmin,next_ymin,next_w,next_h,next_classid, next_class_name = labeling_file[frame][i]
+                            labeling_file[frame][i] = [curr_anchor_id,next_xmin,next_ymin,next_w,next_h,new_class_index,CLASS_LIST[new_class_index]]
+                else:
+                    if labeling_file[frame][0]==anchor_id:
+                        next_anchor_id,next_xmin,next_ymin,next_w,next_h,next_classid, next_class_name = labeling_file[frame]
+                        labeling_file[frame]= [curr_anchor_id,next_xmin,next_ymin,next_w,next_h,new_class_index,CLASS_LIST[new_class_index]]
             curr_anchor_id+=1
         elif 'resize_bbox' in action:
             new_w = abs(new_x_left-new_x_right)
@@ -515,70 +555,74 @@ def edit_bbox(obj_to_edit, action):
                 labeling_file[current_img_path][selected_bbox]= [anchor_id,new_x_left,new_y_top,new_w,new_h,class_index,class_name]
             else:
                 labeling_file[current_img_path] = [anchor_id,new_x_left,new_y_top,new_w,new_h,class_index,class_name]
-    save_darklabel_txt(labeling_file_dir)
+    # save_darklabel_txt(labeling_file_dir)
 
             
 
 
 
 def mouse_listener(event, x, y, flags, param):
-    # mouse callback function
-    global is_bbox_selected, prev_was_double_click, mouse_x, mouse_y, point_1, point_2
+    try:
+        # mouse callback function
+        global is_bbox_selected, prev_was_double_click, mouse_x, mouse_y, point_1, point_2
 
-    set_class = True
-    if event == cv2.EVENT_MOUSEMOVE:
-        mouse_x = x
-        mouse_y = y
-    elif event == cv2.EVENT_LBUTTONDBLCLK:
-        prev_was_double_click = True
-        #print('Double click')
-        point_1 = (-1, -1)
-        # if clicked inside a bounding box we set that bbox
-        set_selected_bbox(set_class)
-    # By AlexeyGy: delete via right-click
-    elif event == cv2.EVENT_RBUTTONDOWN:
-        set_class = False
-        set_selected_bbox(set_class)
-        if is_bbox_selected:
-            obj_to_edit = img_objects[selected_bbox]
-            
-            # if keyboard.is_pressed('r'):
-            #     print('remove with r')
-            edit_bbox(obj_to_edit, 'delete')
-            is_bbox_selected = False
-    elif event == cv2.EVENT_LBUTTONDOWN:
-        if prev_was_double_click:
-            #print('Finish double click')
-            prev_was_double_click = False
-        else:
-            #print('Normal left click')
-
-            # Check if mouse inside on of resizing anchors of the selected bbox
+        set_class = True
+        if event == cv2.EVENT_MOUSEMOVE:
+            mouse_x = x
+            mouse_y = y
+        elif event == cv2.EVENT_LBUTTONDBLCLK:
+            prev_was_double_click = True
+            #print('Double click')
+            point_1 = (-1, -1)
+            # if clicked inside a bounding box we set that bbox
+            set_selected_bbox(set_class)
+        # By AlexeyGy: delete via right-click
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            set_class = False
+            set_selected_bbox(set_class)
             if is_bbox_selected:
-                dragBBox.handler_left_mouse_down(x, y, img_objects[selected_bbox])
+                obj_to_edit = img_objects[selected_bbox]
+                
+                # if keyboard.is_pressed('r'):
+                #     print('remove with r')
+                edit_bbox(obj_to_edit, 'delete')
+                is_bbox_selected = False
+        elif event == cv2.EVENT_LBUTTONDOWN:
+            if prev_was_double_click:
+                #print('Finish double click')
+                prev_was_double_click = False
+            else:
+                #print('Normal left click')
 
-            if dragBBox.anchor_being_dragged is None:
-                if point_1[0] == -1:
-                    if is_bbox_selected:
-                        if is_mouse_inside_delete_button():
-                            set_selected_bbox(set_class)
-                            obj_to_edit = img_objects[selected_bbox]
-                            edit_bbox(obj_to_edit, 'delete_recursive')
-                        is_bbox_selected = False
+                # Check if mouse inside on of resizing anchors of the selected bbox
+                if is_bbox_selected:
+                    dragBBox.handler_left_mouse_down(x, y, img_objects[selected_bbox])
+
+                if dragBBox.anchor_being_dragged is None:
+                    if point_1[0] == -1:
+                        if is_bbox_selected:
+                            if is_mouse_inside_delete_button():
+                                # set_selected_bbox(set_class)
+                                obj_to_edit = img_objects[selected_bbox]
+                                edit_bbox(obj_to_edit, 'delete_recursive')
+                            is_bbox_selected = False
+                        else:
+                            # first click (start drawing a bounding box or delete an item)
+
+                            point_1 = (x, y)
                     else:
-                        # first click (start drawing a bounding box or delete an item)
+                        # minimal size for bounding box to avoid errors
+                        threshold = 5
+                        if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
+                            # second click
+                            point_2 = (x, y)
 
-                        point_1 = (x, y)
-                else:
-                    # minimal size for bounding box to avoid errors
-                    threshold = 5
-                    if abs(x - point_1[0]) > threshold or abs(y - point_1[1]) > threshold:
-                        # second click
-                        point_2 = (x, y)
+        elif event == cv2.EVENT_LBUTTONUP:
+            if dragBBox.anchor_being_dragged is not None:
+                dragBBox.handler_left_mouse_up(x, y)
+    except Exception:
+        pass
 
-    elif event == cv2.EVENT_LBUTTONUP:
-        if dragBBox.anchor_being_dragged is not None:
-            dragBBox.handler_left_mouse_up(x, y)
 
 
 
@@ -667,21 +711,28 @@ def get_annotation_paths(img_path, annotation_formats):
 
 
 
-def read_darklabel_file(file_dir,img_path):
-    frame_number = img_path.split('_')[-1].replace('.jpg','')
+def read_darklabel_file(file_dir,video_name):
+    # frame_number = img_path.split('_')[-1].replace('.jpg','')
     f = open(file_dir,'r')
     relevant_objs = []
-
+    
     for line in f:
         objs = line.split('\n')[0].split(',')
-        if int(objs[0]) == int(frame_number):
-            frame_number = objs.pop(0)
-            class_name = objs.pop(-1)
-            objs = list(map(int, objs))
-            objs.append(class_name)
-            relevant_objs.append(objs)
+        # if int(objs[0]) == int(frame_number):
+        frame_number = objs.pop(0)
+        class_name = objs.pop(-1)
+        objs = list(map(int, objs))
+        objs.append(CLASSES_INDEX[class_name])
+        objs.append(class_name)
+        relevant_objs.append(objs)
+        key = video_name+frame_number+'.jpg'
+        if labeling_file.get(key,None) == None:
+            labeling_file[key] = [objs]
+        else:
+            labeling_file[key].append(objs)
+        # labeling_file[]
     # curr_anchor_id = max(relevant_objs,key=lambda o: o[0])
-    return relevant_objs
+    # return relevant_objs
 
 def update_bounding_box(frame_path,anchor_id,class_index,xmin,ymin,xmax,ymax):
     w= abs(xmax-xmin)
@@ -695,6 +746,7 @@ def update_bounding_box(frame_path,anchor_id,class_index,xmin,ymin,xmax,ymax):
            labeling_file[frame_path].append([anchor_id, xmin,ymin,w,h,class_index,CLASS_LIST[class_index]])    
 
 
+
 def save_darklabel_txt(labeling_file_dir):
     open(labeling_file_dir, "w")
     with open(labeling_file_dir, "a+") as f:
@@ -704,13 +756,17 @@ def save_darklabel_txt(labeling_file_dir):
             nested_list = any(isinstance(i, list) for i in objs)
             if nested_list:
                 for obj in objs:
+                    index = obj.pop(-2)
                     output_line = frame_number + ',' + ','.join(str(e) for e in obj)
+                    obj.insert(-1,index)
                     f.write(output_line)
                     f.write("\n")
             else:
                 if objs == []:
                     continue
+                index = objs.pop(-2)
                 output_line = frame_number + ',' + ','.join(str(e) for e in objs)
+                objs.insert(-1,index)
                 f.write(output_line)
                 f.write("\n")
 
@@ -959,6 +1015,7 @@ class LabelTracker():
         # json_file_data.update({'n_anchor_ids': (anchor_id + 1)})
         # curr_anchor_id
         # save the updated data
+        copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
         with open(json_file_path, 'w') as outfile:
             json.dump(json_file_data, outfile, sort_keys=True, indent=4)
         save_darklabel_txt(labeling_file_dir)
@@ -1027,8 +1084,12 @@ if __name__ == '__main__':
                 open(labeling_file_dir, 'a').close()
             else:
                 copyfile(labeling_file_dir, labeling_file_dir[:-4]+'_backup.txt')
-                for img_path in IMAGE_PATH_LIST:
-                    labeling_file[img_path] = read_darklabel_file(labeling_file_dir,img_path)
+                first_element = IMAGE_PATH_LIST[0]
+                ending = IMAGE_PATH_LIST[0].split('_')[-1]
+                root_name = first_element.replace(ending,'')
+                read_darklabel_file(labeling_file_dir,root_name)
+                # for img_path in IMAGE_PATH_LIST:
+                #     labeling_file[img_path] = read_darklabel_file(labeling_file_dir,img_path)
                 set_max_anchor()
 
 
@@ -1186,10 +1247,11 @@ if __name__ == '__main__':
                 # boxes, confidences, classIds =  detector.detect(im_rgb)
                 image_size = 1024
                 height, width = im_rgb.shape[:2]
-                image = im_rgb.astype(np.float32) / 255
-                image[:, :, 0] = (image[:, :, 0] - 0.485) / 0.229
-                image[:, :, 1] = (image[:, :, 1] - 0.456) / 0.224
-                image[:, :, 2] = (image[:, :, 2] - 0.406) / 0.225
+                image = im_rgb.astype(np.float32)
+                # image = im_rgb.astype(np.float32) / 255
+                # image[:, :, 0] = (image[:, :, 0] - 0.485) / 0.229
+                # image[:, :, 1] = (image[:, :, 1] - 0.456) / 0.224
+                # image[:, :, 2] = (image[:, :, 2] - 0.406) / 0.225
                 if height > width:
                     scale = image_size / height
                     resized_height = image_size
@@ -1206,25 +1268,42 @@ if __name__ == '__main__':
                 new_image = np.transpose(new_image, (2, 0, 1))
                 new_image = new_image[None, :, :, :]
                 new_image = torch.Tensor(new_image)
+
                 if torch.cuda.is_available():
                     new_image = new_image.cuda()
                 with torch.no_grad():
-                    confidences, classIds, boxes = detector(new_image) # boxes are xmin ymin xmax ymax
+                    y = detector([{'image': new_image.squeeze()}], is_training=False)[0]
+                    confidences = y['instances'].get('scores')
+                    classIds = y['instances'].get('pred_classes')
+                    boxes = y['instances'].get('pred_boxes').tensor
+                    # confidences, classIds, boxes = detector(new_image) # boxes are xmin ymin xmax ymax
                     boxes /= scale
                 boxes[:,2]=boxes[:,2]-boxes[:,0] # we need x y w h
                 boxes[:,3]=boxes[:,3]-boxes[:,1]
-                boxes=boxes[confidences>0.7].cpu() 
-                classIds=classIds[confidences>0.7].cpu()
-                confidences=confidences[confidences>0.7].cpu()
+                boxes=boxes[confidences>0.4].cpu() 
+                classIds=classIds[confidences>0.4].cpu()
+                confidences=confidences[confidences>0.4].cpu()
                 if  len(boxes)>0:
                     # object_list=img_objects[:]
-                    for box,class_ in zip(boxes,classIds):
+                    for box,class_index in zip(boxes,classIds):
                         update_bounding_box(img_path,curr_anchor_id,class_index,int(box[0]),int(box[1]),(int(box[0]) + int(box[2])),(int(box[1]) + int(box[3])))
                         curr_anchor_id+=1
+                save_darklabel_txt(labeling_file_dir)
 
             # quit key listener
             elif pressed_key == ord('q'):
+                current_img_path = IMAGE_PATH_LIST[img_index]
+              
+                is_from_video, video_name = is_frame_from_video(current_img_path)
+                if is_from_video:
+                    # get json file corresponding to that video
+                    json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
+                    file_exists, json_file_data = get_json_file_data(json_file_path)
+                    copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
+                    with open(json_file_path, 'w') as outfile:
+                        json.dump(json_file_data, outfile, sort_keys=True, indent=4)
                 save_darklabel_txt(labeling_file_dir)
+                 
 
 
                 break

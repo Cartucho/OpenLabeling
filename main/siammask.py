@@ -92,7 +92,7 @@ class SiamMask(object):
             #                 (bbox[0]+bbox[2], bbox[1]+bbox[3]),
             #                 (0, 255, 0), 3)
             score = outputs['best_score']
-            if score >0.6:
+            if score > 0.7:
                 return True, bbox
             else:
                 return False, bbox
