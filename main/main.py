@@ -1,10 +1,10 @@
 #!/bin/python
 import argparse
 import glob
-import json
+import json, orjson, ujson
 import os
 import re
-
+import time
 import cv2
 import numpy as np
 from tqdm import tqdm
@@ -75,6 +75,10 @@ class_index = 0
 img_index = 0
 img = None
 img_objects = []
+show_curr_tracked = False
+current_data = None
+non_track_objects = []
+redo_tracking_objects = []
 
 INPUT_DIR  = args.input_dir
 OUTPUT_DIR = args.output_dir
@@ -415,6 +419,14 @@ def is_mouse_inside_delete_button():
                 return True
     return False
 
+def is_mouse_inside_tracked_button():
+    for idx, obj in enumerate(img_objects):
+        if idx == selected_bbox:
+            anchor_id, x1, y1, x2, y2,class_id,class_name = obj
+            x1_c, y1_c, x2_c, y2_c = get_tracked_icon(x1, y1, x2, y2)
+            if pointInRect(mouse_x, mouse_y, x1_c, y1_c, x2_c, y2_c):
+                return True
+    return False
 
 def edit_bbox(obj_to_edit, action):
     ''' action = `delete`
@@ -480,7 +492,7 @@ def edit_bbox(obj_to_edit, action):
                         if 'delete' in action:
                             json_object_list.remove(json_obj)
                         elif 'change_class' in action:
-                            json_obj['class_index'] = new_class_index
+                            json_owbj['class_index'] = new_class_index
                         elif 'resize_bbox' in action:
                             json_obj['bbox']['xmin'] = new_x_left
                             json_obj['bbox']['ymin'] = new_y_top
@@ -488,9 +500,10 @@ def edit_bbox(obj_to_edit, action):
                             json_obj['bbox']['ymax'] = new_y_bottom
                     else:
                         break
-
+                # super slow 
                 # save the edited data
                 # with open(json_file_path, 'w') as outfile:
+                #     json.dump(json_file_data, outfile, sort_keys=True, indent=4)
                 #     json.dump(json_file_data, outfile, sort_keys=True, indent=4)
 
     # 3. loop through bboxes_to_edit_dict and edit the corresponding annotation files
@@ -604,6 +617,16 @@ def mouse_listener(event, x, y, flags, param):
                                 # set_selected_bbox(set_class)
                                 obj_to_edit = img_objects[selected_bbox]
                                 edit_bbox(obj_to_edit, 'delete_recursive')
+                            if is_mouse_inside_tracked_button():
+                                obj_to_edit = img_objects[selected_bbox]
+                                if obj_to_edit  in object_list:
+                                    if obj_to_edit in redo_tracking_objects:
+                                        redo_tracking_objects.remove(obj_to_edit)
+                                    non_track_objects.append(obj_to_edit)
+                                else:
+                                    if obj_to_edit in non_track_objects:
+                                        non_track_objects.remove(obj_to_edit)
+                                    redo_tracking_objects.append(obj_to_edit)
                             is_bbox_selected = False
                         else:
                             # first click (start drawing a bounding box or delete an item)
@@ -633,6 +656,15 @@ def get_close_icon(x1, y1, x2, y2):
         percentage += 0.1
     return (x2 - height), y1, x2, (y1 + height)
 
+def get_tracked_icon(x1,y1,x2,y2):
+    percentage = 0.05
+    height = -1
+    while height < 15 and percentage < 1.0:
+        height = int((y2 - y1) * percentage)
+        percentage += 0.1
+    return x1, y1, (x1+height), (y1 + height)
+
+
 
 def draw_close_icon(tmp_img, x1_c, y1_c, x2_c, y2_c):
     red = (0,0,255)
@@ -642,6 +674,21 @@ def draw_close_icon(tmp_img, x1_c, y1_c, x2_c, y2_c):
     cv2.line(tmp_img, (x1_c, y2_c), (x2_c, y1_c), white, 2)
     return tmp_img
 
+def draw_tracked_icon(tmp_img, x1_c, y1_c, x2_c, y2_c):
+    green = (0,255,0)
+    cv2.rectangle(tmp_img, (x1_c + 1, y1_c - 1), (x2_c, y2_c), green, -1)
+    white = (255, 255, 255)
+    # cv2.line(tmp_img, (x1_c, y1_c), (x2_c, y2_c), white, 2)
+    # cv2.line(tmp_img, (x1_c, y2_c), (x2_c, y1_c), white, 2)
+    return tmp_img
+
+def draw_tracked_icon_grey(tmp_img, x1_c, y1_c, x2_c, y2_c):
+    grey = (192,192,192)
+    cv2.rectangle(tmp_img, (x1_c + 1, y1_c - 1), (x2_c, y2_c), grey, -1)
+    white = (255, 255, 255)
+    # cv2.line(tmp_img, (x1_c, y1_c), (x2_c, y2_c), white, 2)
+    # cv2.line(tmp_img, (x1_c, y2_c), (x2_c, y1_c), white, 2)
+    return tmp_img
 
 def draw_info_bb_selected(tmp_img):
     for idx, obj in enumerate(img_objects):
@@ -804,6 +851,7 @@ def is_frame_from_video(img_path):
 def get_json_file_data(json_file_path):
     if os.path.isfile(json_file_path):
         with open(json_file_path) as f:
+            # data = json.load(f)
             data = json.load(f)
             return True, data
     else:
@@ -859,9 +907,12 @@ def remove_already_tracked_objects(object_list, img_path, json_file_data):
     temp_object_list = object_list[:]
     for obj in temp_object_list:
         obj_dict = get_json_object_dict(obj, json_object_list)
-        if obj_dict is not None:
+        if obj_dict is not None and obj not in redo_tracking_objects:
             object_list.remove(obj)
             # json_object_list.remove(obj_dict)
+        elif obj in non_track_objects:
+            object_list.remove(obj)
+ 
     return object_list
 
 
@@ -1133,6 +1184,12 @@ if __name__ == '__main__':
     display_text('Welcome!\n Press [h] for help.', 4000)
 
     # loop
+    img_path = IMAGE_PATH_LIST[img_index]
+    is_from_video, CURR_VIDEO_NAME = is_frame_from_video(img_path)
+    object_list=img_objects[:]
+    if is_from_video:
+        json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, CURR_VIDEO_NAME))
+        file_exists, current_data = get_json_file_data(json_file_path)
     while True:
         color = class_rgb[class_index].tolist()
         # clone the img
@@ -1152,8 +1209,21 @@ if __name__ == '__main__':
         tmp_img = cv2.rectangle(tmp_img, (mouse_x + LINE_THICKNESS, mouse_y - LINE_THICKNESS), (mouse_x + text_width + margin, mouse_y - text_height - margin), complement_bgr(color), -1)
         tmp_img = cv2.putText(tmp_img, class_name+str(curr_anchor_id), (mouse_x + margin, mouse_y - margin), font, font_scale, color, LINE_THICKNESS, cv2.LINE_AA)
         # get annotation paths
+
         img_path = IMAGE_PATH_LIST[img_index]
         annotation_paths = get_annotation_paths(img_path, annotation_formats)
+
+        object_list = img_objects[:]
+        for o in object_list:
+            x1_c, y1_c, x2_c, y2_c=get_tracked_icon(*o[1:5])
+            tmp_img = draw_tracked_icon_grey(tmp_img,x1_c, y1_c, x2_c, y2_c)
+        object_list = remove_already_tracked_objects(object_list, img_path, current_data)
+        for o in object_list:
+            x1_c, y1_c, x2_c, y2_c=get_tracked_icon(*o[1:5])
+            tmp_img = draw_tracked_icon(tmp_img,x1_c, y1_c, x2_c, y2_c)
+
+  
+
         if dragBBox.anchor_being_dragged is not None:
             dragBBox.handler_mouse_move(mouse_x, mouse_y)
         # draw already done bounding boxes
@@ -1218,6 +1288,21 @@ if __name__ == '__main__':
                         )
                 display_text(text, 5000)
             # show edges key listener
+            elif pressed_key == ord('m'):
+                # show_curr_tracked =  not show_curr_tracked
+                img_path = IMAGE_PATH_LIST[img_index]
+                is_from_video, CURR_VIDEO_NAME = is_frame_from_video(img_path)
+                object_list=img_objects[:]
+                if is_from_video:
+                    json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, CURR_VIDEO_NAME))
+                    file_exists, current_data = get_json_file_data(json_file_path)
+
+                    # if file_exists:
+                    #     object_list = remove_already_tracked_objects(object_list, img_path, current_data)
+                    #     for o in object_list:
+                    #         x1_c, y1_c, x2_c, y2_c=get_tracked_icon(o[0],o[1],o[2],o[3])
+                    #         tmp_img = draw_tracked_icon(tmp_img,x1_c, y1_c, x2_c, y2_c)
+
             elif pressed_key == ord('e'):
                 if edges_on == True:
                     edges_on = False
@@ -1305,6 +1390,7 @@ if __name__ == '__main__':
                     file_exists, json_file_data = get_json_file_data(json_file_path)
                     copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
                     with open(json_file_path, 'w') as outfile:
+                        # json.dump(json_file_data, outfile, sort_keys=True, indent=4)
                         json.dump(json_file_data, outfile, sort_keys=True, indent=4)
                 save_darklabel_txt(labeling_file_dir)
                  
