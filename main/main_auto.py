@@ -42,7 +42,7 @@ def nonblank_lines(f):
         if line:
             yield line
 
-with open('/home/skoch/AutoLabeling/main/class_list.txt') as f:
+with open('class_list.txt') as f:
     CLASS_LIST = list(nonblank_lines(f))
 CLASSES_INDEX = {}
 for i in range(len(CLASS_LIST)):
@@ -66,6 +66,9 @@ parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
 parser.add_argument('-o', '--output_dir', default='output', type=str, help='Path to output directory')
 parser.add_argument('-t', '--thickness', default='1', type=int, help='Bounding box and cross line thickness')
+parser.add_argument('--detector', default='../object_detection/crow/epoch=46-step=17342.ckpt', type=str, help='Detector checkpoint dir')
+parser.add_argument('--tracker', default='SiamMask', type=str, help="tracker_type being used: ['SiamMask']")
+
 args = parser.parse_args()
 
 class_index = 0
@@ -100,7 +103,7 @@ point_1 = (-1, -1)
 point_2 = (-1, -1)
 
 
-model = '/home/skoch/AutoLabeling/main/crow/epoch=46-step=17342.ckpt'
+model = args.detector
 if torch.cuda.is_available():
     detector = CenterNetBetterModule.load_from_checkpoint(model, pretrained_checkpoints_path=None)
     detector = detector.cuda()
@@ -116,7 +119,10 @@ def display_text(text, time):
 
 def set_img_index(x):
     global img_index, img
+    global is_last_frame
     img_index = x
+    if img_index < last_index:
+        is_last_frame = False
     img_path = IMAGE_PATH_LIST[img_index]
     img = cv2.imread(img_path)
     text = 'Showing image {}/{}, path: {}'.format(str(img_index), str(last_img_index), img_path)
@@ -596,7 +602,7 @@ class TrackerManager:
     # TODO: press ESC to stop the tracking process
 
     def __init__(self, tracker_type, init_frame, next_frame_path_list):
-        tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN','SiamMask']
+        tracker_types = ['SiamMask']
         ''' Recomended tracker_type:
               KCF -> KCF is usually very good (minimum OpenCV 3.1.0)
               CSRT -> More accurate than KCF but slightly slower (minimum OpenCV 3.4.2)
@@ -993,7 +999,7 @@ while True:
                 new_track =True
                 return_to_index = img_index
                 print("Using tracker!!!!")
-                tracker_manager = TrackerManager('SiamMask', init_frame, next_frame_path_list)
+                tracker_manager = TrackerManager(args.tracker, init_frame, next_frame_path_list)
                 new_boxes_max = np.asarray([object_[1:5] for object_ in object_list])
                 new_classIds = [object_[-2] for object_ in object_list]
 

@@ -22,7 +22,7 @@ def nonblank_lines(f):
         if line:
             yield line
 
-with open('/home/skoch/AutoLabeling/main/class_list.txt') as f:
+with open('class_list.txt') as f:
     CLASS_LIST = list(nonblank_lines(f))
 
 CLASSES_INDEX = {}
@@ -42,7 +42,9 @@ except cv2.error:
     print('-> Please ignore this error message\n')
 cv2.destroyAllWindows()
 
-
+VIDEO_PATH = ''
+CAPTURE = None
+to_track_objects = []
 
 parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
@@ -57,13 +59,12 @@ tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 
         CSRT -> More accurate than KCF but slightly slower (minimum OpenCV 3.4.2)
         MOSSE -> Less accurate than KCF but very fast (minimum OpenCV 3.4.1)
 '''
-parser.add_argument('--tracker', default='KCF', type=str, help="tracker_type being used: ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN', 'SiamMask']")
-parser.add_argument('-n', '--n_frames', default='200', type=int, help='number of frames to track object for')
-parser.add_argument('-d', '--detector', default='../object_detection/efficientdet/trained_models/signatrix_efficientdet_coco.pth', type=str, help='Detector model dir')
+parser.add_argument('--tracker', default='SiamMask', type=str, help="tracker_type being used: ['SiamMask']")
+parser.add_argument('-n', '--n_frames', default='10000000', type=int, help='number of frames to track object for')
+parser.add_argument('--detector', default='../object_detection/crow/epoch=46-step=17342.ckpt', type=str, help='Detector checkpoint dir')
 args = parser.parse_args()
 
 model = args.detector
-model = '/home/skoch/AutoLabeling/main/crow/epoch=46-step=17342.ckpt'
 if torch.cuda.is_available():
     detector = CenterNetBetterModule.load_from_checkpoint(model, pretrained_checkpoints_path=None)
     detector = detector.cuda()
@@ -233,6 +234,10 @@ def set_img_index(x):
     img_index = x
     img_path = IMAGE_PATH_LIST[img_index]
     img = cv2.imread(img_path)
+    
+    # CAPTURE.set(cv2.CAP_PROP_POS_FRAMES,img_index)
+    # _,img = CAPTURE.read()
+
     text = 'Showing image {}/{}, path: {}'.format(str(img_index), str(last_img_index), img_path)
     display_text(text, 1000)
 
@@ -504,16 +509,6 @@ def edit_bbox(obj_to_edit, action):
                 del labeling_file[current_img_path]
             next_frames = get_next_frame_path_list(video_name, current_img_path)
             for frame in next_frames:
-                # continue_delete = False
-                # try:
-                #     obj = labeling_file[frame][selected_bbox]
-                #     if obj[0] != anchor_id:
-                #         continue
-                # except Exception:
-                #     break
-                # labeling_file[frame].pop(selected_bbox)
-                # if labeling_file[frame]==[]:
-                #     del labeling_file[frame]
                 delete_index=-1
                 for i,obj in enumerate(labeling_file[frame]):
                 # continue_delete = False
@@ -525,6 +520,9 @@ def edit_bbox(obj_to_edit, action):
                         labeling_file[frame].pop(delete_index)
                         if labeling_file[frame]==[]:
                             del labeling_file[frame]
+                else:
+                    continue
+                
         elif 'delete' in action:
             labeling_file[current_img_path].pop(selected_bbox)
             if labeling_file[current_img_path]==[]:
@@ -539,10 +537,11 @@ def edit_bbox(obj_to_edit, action):
             next_frames = get_next_frame_path_list(video_name, current_img_path)
             for frame in next_frames:
                 if nested_list:
-                    for i in range(len(labeling_file[frame])):
-                        if labeling_file[frame][i][0] == anchor_id:
-                            next_anchor_id,next_xmin,next_ymin,next_w,next_h,next_classid, next_class_name = labeling_file[frame][i]
-                            labeling_file[frame][i] = [curr_anchor_id,next_xmin,next_ymin,next_w,next_h,new_class_index,CLASS_LIST[new_class_index]]
+                    if labeling_file.get(frame,None)!=None:
+                        for i in range(len(labeling_file[frame])):
+                            if labeling_file[frame][i][0] == anchor_id:
+                                next_anchor_id,next_xmin,next_ymin,next_w,next_h,next_classid, next_class_name = labeling_file[frame][i]
+                                labeling_file[frame][i] = [curr_anchor_id,next_xmin,next_ymin,next_w,next_h,new_class_index,CLASS_LIST[new_class_index]]
                 else:
                     if labeling_file[frame][0]==anchor_id:
                         next_anchor_id,next_xmin,next_ymin,next_w,next_h,next_classid, next_class_name = labeling_file[frame]
@@ -999,13 +998,13 @@ class LabelTracker():
                 xmin,ymin,w,h=bbox
                 xmax = xmin + w
                 ymax = ymin + h
-                obj = [anchor_id,xmin, ymin, xmax, ymax,class_index,class_name]
+                obj = [anchor_id,xmin, ymin, xmax, ymax,int(class_index),class_name]
                 frame_data_dict = json_file_add_object(frame_data_dict, frame_path, anchor_id, pred_counter, obj)
                 cv2.rectangle(next_image, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
                 # save prediction
                 annotation_paths = get_annotation_paths(frame_path, annotation_formats)
                 # save_bounding_box(annotation_paths, class_index, (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
-                update_bounding_box(frame_path,anchor_id,class_index,xmin,ymin,xmax,ymax)
+                update_bounding_box(frame_path,anchor_id,int(class_index),xmin,ymin,xmax,ymax)
                 # show prediction
                 cv2.imshow(WINDOW_NAME, next_image)
                 pressed_key = cv2.waitKey(DELAY)
@@ -1015,10 +1014,10 @@ class LabelTracker():
         # json_file_data.update({'n_anchor_ids': (anchor_id + 1)})
         # curr_anchor_id
         # save the updated data
-        copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
-        with open(json_file_path, 'w') as outfile:
-            json.dump(json_file_data, outfile, sort_keys=True, indent=4)
-        save_darklabel_txt(labeling_file_dir)
+        # copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
+        # with open(json_file_path, 'w') as outfile:
+        #     json.dump(json_file_data, outfile, sort_keys=True, indent=4)
+        # save_darklabel_txt(labeling_file_dir)
 
 
 def complement_bgr(color):
@@ -1052,6 +1051,8 @@ if __name__ == '__main__':
             n_frames = int(test_video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
             test_video_cap.release()
             if n_frames > 0:
+                VIDEO_PATH = f_path
+                # CAPTURE = cv2.VideoCapture(f_path)
                 # it is a video
                 desired_img_format = '.jpg'
                 video_frames_path, video_name_ext = convert_video_to_images(f_path, n_frames, desired_img_format)
@@ -1169,7 +1170,8 @@ if __name__ == '__main__':
             if point_2[0] != -1:
                 # save the bounding box
                 # save_bounding_box(annotation_paths, class_index, point_1, point_2, width, height)
-                update_bounding_box(img_path,curr_anchor_id,class_index,point_1[0],point_1[1],point_2[0],point_2[1])
+                update_bounding_box(img_path,curr_anchor_id,int(class_index),point_1[0],point_1[1],point_2[0],point_2[1])
+                
                 # update_json_anchor_id()
                 curr_anchor_id+=1
                 save_darklabel_txt(labeling_file_dir)
@@ -1201,8 +1203,10 @@ if __name__ == '__main__':
                     class_index = increase_index(class_index, last_class_index)
                 draw_line(tmp_img, mouse_x, mouse_y, height, width, color)
                 set_class_index(class_index)
-                cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, class_index)
+                cv2.setTrackbarPos(TRACKBAR_CLASS, WINDOW_NAME, int(class_index))
                 if is_bbox_selected:
+                    if selected_bbox > len(img_objects):
+                        continue
                     obj_to_edit = img_objects[selected_bbox]
                     edit_bbox(obj_to_edit, 'change_class:{}'.format(class_index))
             # help key listener
@@ -1286,7 +1290,7 @@ if __name__ == '__main__':
                 if  len(boxes)>0:
                     # object_list=img_objects[:]
                     for box,class_index in zip(boxes,classIds):
-                        update_bounding_box(img_path,curr_anchor_id,class_index,int(box[0]),int(box[1]),(int(box[0]) + int(box[2])),(int(box[1]) + int(box[3])))
+                        update_bounding_box(img_path,curr_anchor_id,int(class_index),int(box[0]),int(box[1]),(int(box[0]) + int(box[2])),(int(box[1]) + int(box[3])))
                         curr_anchor_id+=1
                 save_darklabel_txt(labeling_file_dir)
 
