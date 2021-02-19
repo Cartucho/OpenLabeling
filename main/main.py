@@ -534,7 +534,7 @@ def edit_bbox(obj_to_edit, action):
                         if labeling_file[frame]==[]:
                             del labeling_file[frame]
                 else:
-                    continue
+                    break
                 
         elif 'delete' in action:
             labeling_file[current_img_path].pop(selected_bbox)
@@ -659,9 +659,9 @@ def get_close_icon(x1, y1, x2, y2):
 def get_tracked_icon(x1,y1,x2,y2):
     percentage = 0.05
     height = -1
-    while height < 15 and percentage < 1.0:
+    while height < 10 and percentage < 0.50:
         height = int((y2 - y1) * percentage)
-        percentage += 0.1
+        percentage += 0.05
     return x1, y1, (x1+height), (y1 + height)
 
 
@@ -1026,6 +1026,7 @@ class LabelTracker():
 
 
     def start_tracker(self, json_file_data, json_file_path, img_path, obj, color, annotation_formats):
+        global img_index
         tracker = self.call_tracker_constructor(self.tracker_type)
         # anchor_id = json_file_data['n_anchor_ids']
         anchor_id = obj[0]
@@ -1037,13 +1038,21 @@ class LabelTracker():
         xmin, ymin, xmax, ymax = obj[1:5]
         initial_bbox = (xmin, ymin, xmax - xmin, ymax - ymin)
         tracker.init(self.init_frame, initial_bbox)
+        # final_frame = None
         for frame_path in self.next_frame_path_list:
             next_image = cv2.imread(frame_path)
+            img_index = increase_index(img_index, last_img_index)
+            
+            # cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+            
+            
+            # final_frame = 
             # get the new bbox prediction of the object
             success, bbox = tracker.update(next_image.copy())
             if pred_counter >= N_FRAMES:
                 success = False
             if success:
+                
                 pred_counter += 1
                 # xmin, ymin, w, h = map(int, bbox)
                 xmin,ymin,w,h=bbox
@@ -1056,11 +1065,17 @@ class LabelTracker():
                 annotation_paths = get_annotation_paths(frame_path, annotation_formats)
                 # save_bounding_box(annotation_paths, class_index, (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
                 update_bounding_box(frame_path,anchor_id,int(class_index),xmin,ymin,xmax,ymax)
+
                 # show prediction
                 cv2.imshow(WINDOW_NAME, next_image)
                 pressed_key = cv2.waitKey(DELAY)
+                if pressed_key == ord('x'):
+                    
+                    break
             else:
                 break
+        set_img_index(img_index)
+        cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
 
         # json_file_data.update({'n_anchor_ids': (anchor_id + 1)})
         # curr_anchor_id
@@ -1135,7 +1150,10 @@ if __name__ == '__main__':
            
                 open(labeling_file_dir, 'a').close()
             else:
-                copyfile(labeling_file_dir, labeling_file_dir[:-4]+'_backup.txt')
+                try:
+                    copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
+                except Exception:
+                    pass
                 first_element = IMAGE_PATH_LIST[0]
                 ending = IMAGE_PATH_LIST[0].split('_')[-1]
                 root_name = first_element.replace(ending,'')
@@ -1289,6 +1307,22 @@ if __name__ == '__main__':
                 display_text(text, 5000)
             # show edges key listener
             elif pressed_key == ord('m'):
+                current_img_path = IMAGE_PATH_LIST[img_index]
+              
+                is_from_video, video_name = is_frame_from_video(current_img_path)
+                if is_from_video:
+                    # get json file corresponding to that video
+                    json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
+                    file_exists, json_file_data = get_json_file_data(json_file_path)
+                    try:
+                        copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
+                    except Exception:
+                        pass
+                    with open(json_file_path, 'w') as outfile:
+                        # json.dump(json_file_data, outfile, sort_keys=True, indent=4)
+                        json.dump(json_file_data, outfile, sort_keys=True, indent=4)
+                save_darklabel_txt(labeling_file_dir)
+
                 # show_curr_tracked =  not show_curr_tracked
                 img_path = IMAGE_PATH_LIST[img_index]
                 is_from_video, CURR_VIDEO_NAME = is_frame_from_video(img_path)
@@ -1327,7 +1361,12 @@ if __name__ == '__main__':
                         # initial frame
                         init_frame = img.copy()
                         label_tracker = LabelTracker(TRACKER_TYPE, init_frame, next_frame_path_list)
+                        backup_tracker_frame = img_index
                         for obj in object_list:
+                            img_index = backup_tracker_frame
+                            set_img_index(img_index)
+                            cv2.setTrackbarPos(TRACKBAR_IMG, WINDOW_NAME, img_index)
+
                             class_index = obj[-2]
                             color = class_rgb[class_index].tolist()
                             label_tracker.start_tracker(json_file_data, json_file_path, img_path, obj, color, annotation_formats)
@@ -1379,6 +1418,8 @@ if __name__ == '__main__':
                         curr_anchor_id+=1
                 save_darklabel_txt(labeling_file_dir)
 
+            elif pressed_key == ord(' '):
+                pass
             # quit key listener
             elif pressed_key == ord('q'):
                 current_img_path = IMAGE_PATH_LIST[img_index]
@@ -1388,11 +1429,15 @@ if __name__ == '__main__':
                     # get json file corresponding to that video
                     json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
                     file_exists, json_file_data = get_json_file_data(json_file_path)
-                    copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
+                    try:
+                        copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
+                    except Exception:
+                        pass
                     with open(json_file_path, 'w') as outfile:
                         # json.dump(json_file_data, outfile, sort_keys=True, indent=4)
                         json.dump(json_file_data, outfile, sort_keys=True, indent=4)
                 save_darklabel_txt(labeling_file_dir)
+                
                  
 
 
