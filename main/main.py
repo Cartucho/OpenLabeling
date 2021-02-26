@@ -11,8 +11,8 @@ from tqdm import tqdm
 from shutil import copyfile
 import torch
 from centernet_better.train import CenterNetBetterModule
-
-
+import tkinter as tk
+import sys
 
 
 # load class list
@@ -105,6 +105,7 @@ curr_anchor_id = 0
 
 # selected bounding box
 prev_was_double_click = False
+prev_was_triple_click = False
 is_bbox_selected = False
 selected_bbox = -1
 LINE_THICKNESS = args.thickness
@@ -428,6 +429,15 @@ def is_mouse_inside_tracked_button():
                 return True
     return False
 
+def inside_bbox(x, y, bbox):
+    x1, y1, w, h = bbox
+    x2, y2 = x1+w, y1+h
+    if (x1 < x and x < x2):
+        if (y1 < y and y < y2):
+            return True
+    return False
+
+
 def edit_bbox(obj_to_edit, action):
     ''' action = `delete`
                  `change_class:new_class_index`
@@ -437,6 +447,8 @@ def edit_bbox(obj_to_edit, action):
     global curr_anchor_id
     if 'change_class' in action:
         new_class_index = int(action.split(':')[1])
+    elif 'change_trackid' in action:
+        new_trackid = int(action.split(':')[1])
     elif 'resize_bbox' in action:
         new_x_left = max(0, int(action.split(':')[1]))
         new_y_top = max(0, int(action.split(':')[2]))
@@ -482,7 +494,7 @@ def edit_bbox(obj_to_edit, action):
                 # update json file if contain the same anchor_id
                 for frame_path in frame_path_list:
                     json_object_list = get_json_file_object_list(frame_path, frame_data_dict)
-                    if (('delete_recursive' in action or 'change_class' in action) 
+                    if (('delete_recursive' in action or 'change_class' in action or 'change_trackid' in action) 
                             and int(img_path.split('_')[-1].replace('.jpg',''))>=int(current_img_path.split('_')[-1].replace('.jpg',''))):
                         json_obj = get_json_file_object_by_id(json_object_list, anchor_id) 
                     else:
@@ -492,7 +504,9 @@ def edit_bbox(obj_to_edit, action):
                         if 'delete' in action:
                             json_object_list.remove(json_obj)
                         elif 'change_class' in action:
-                            json_owbj['class_index'] = new_class_index
+                            json_obj['class_index'] = new_class_index
+                        elif 'change_trackid' in action:
+                            json_obj['anchor_id'] = new_trackid
                         elif 'resize_bbox' in action:
                             json_obj['bbox']['xmin'] = new_x_left
                             json_obj['bbox']['ymin'] = new_y_top
@@ -560,6 +574,24 @@ def edit_bbox(obj_to_edit, action):
                         next_anchor_id,next_xmin,next_ymin,next_w,next_h,next_classid, next_class_name = labeling_file[frame]
                         labeling_file[frame]= [curr_anchor_id,next_xmin,next_ymin,next_w,next_h,new_class_index,CLASS_LIST[new_class_index]]
             curr_anchor_id+=1
+        elif 'change_trackid' in action:
+            if nested_list:
+                labeling_file[current_img_path][selected_bbox] = [new_trackid,xmin,ymin,w,h,CLASSES_INDEX[class_name],class_name]
+            else:
+                labeling_file[current_img_path]= [new_trackid,xmin,ymin,w,h,CLASSES_INDEX[class_name],class_name]
+            next_frames = get_next_frame_path_list(video_name, current_img_path)
+            for frame in next_frames:
+                if nested_list:
+                    if labeling_file.get(frame,None)!=None:
+                        for i in range(len(labeling_file[frame])):
+                            if labeling_file[frame][i][0] == anchor_id:
+                                next_anchor_id,next_xmin,next_ymin,next_w,next_h,next_classid, next_class_name = labeling_file[frame][i]
+                                labeling_file[frame][i] = [new_trackid,next_xmin,next_ymin,next_w,next_h,next_classid,next_class_name]
+                else:
+                    if labeling_file[frame][0]==anchor_id:
+                        next_anchor_id,next_xmin,next_ymin,next_w,next_h,next_classid, next_class_name = labeling_file[frame]
+                        labeling_file[frame]= [new_trackid,next_xmin,next_ymin,next_w,next_h,next_classid,next_class_name]
+            curr_anchor_id+=1
         elif 'resize_bbox' in action:
             new_w = abs(new_x_left-new_x_right)
             new_h = abs(new_y_top-new_y_bottom)
@@ -576,7 +608,7 @@ def edit_bbox(obj_to_edit, action):
 def mouse_listener(event, x, y, flags, param):
     try:
         # mouse callback function
-        global is_bbox_selected, prev_was_double_click, mouse_x, mouse_y, point_1, point_2
+        global is_bbox_selected, prev_was_double_click, prev_was_triple_click, mouse_x, mouse_y, point_1, point_2
 
         set_class = True
         if event == cv2.EVENT_MOUSEMOVE:
@@ -599,10 +631,28 @@ def mouse_listener(event, x, y, flags, param):
                 #     print('remove with r')
                 edit_bbox(obj_to_edit, 'delete')
                 is_bbox_selected = False
+        elif event == cv2.EVENT_MBUTTONDOWN:
+            if is_bbox_selected:
+                c_id, x1,y1,x2,y2,_,_= img_objects[selected_bbox]
+                if pointInRect(x,y,x1,y1,x2,y2):
+                # if inside_bbox(x, y, img_objects[selected_bbox]):
+                # dragBBox.handler_left_mouse_down(x, y, img_objects[selected_bbox])
+                    root = tk.Tk()
+                    root.withdraw()
+                    USER_INP = tk.simpledialog.askstring(title="TrackId",
+                                    prompt=f"Current TrackId {c_id}, New TrackId:")
+
+                    obj_to_edit = img_objects[selected_bbox]
+                    edit_bbox(obj_to_edit, 'change_trackid:{}'.format(USER_INP))
+                    # print("TrackId", USER_INP)
+                    root.destroy()
+
+
         elif event == cv2.EVENT_LBUTTONDOWN:
             if prev_was_double_click:
                 #print('Finish double click')
                 prev_was_double_click = False
+                prev_was_triple_click = True
             else:
                 #print('Normal left click')
 
@@ -1306,6 +1356,25 @@ if __name__ == '__main__':
                         )
                 display_text(text, 5000)
             # show edges key listener
+            # elif pressed_key == ord('b'):
+            #     # merge trackids of consectutive frames (this frame with prev)
+            #     current_img_path = IMAGE_PATH_LIST[img_index]
+              
+            #     is_from_video, video_name = is_frame_from_video(current_img_path)
+            #     if is_from_video:
+            #         # get json file corresponding to that video
+            #         json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
+            #         file_exists, json_file_data = get_json_file_data(json_file_path)
+            #         try:
+            #             copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
+            #         except Exception:
+            #             pass
+            #         with open(json_file_path, 'w') as outfile:
+            #             # json.dump(json_file_data, outfile, sort_keys=True, indent=4)
+            #             json.dump(json_file_data, outfile, sort_keys=True, indent=4)
+            #         save_darklabel_txt(labeling_file_dir)
+
+
             elif pressed_key == ord('m'):
                 current_img_path = IMAGE_PATH_LIST[img_index]
               
