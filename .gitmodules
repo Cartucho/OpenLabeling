@@ -2,3 +2,6 @@
 [submodule "object_detection/efficientdet"]
         path = object_detection/efficientdet
         url = https://github.com/signatrix/efficientdet
+[submodule "object_detection/pysot"]
+	path = object_detection/pysot
+	url = https://github.com/STVIR/pysot
