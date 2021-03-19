@@ -50,15 +50,7 @@ parser = argparse.ArgumentParser(description='Open-source image labeling tool')
 parser.add_argument('-i', '--input_dir', default='input', type=str, help='Path to input directory')
 parser.add_argument('-o', '--output_dir', default='output', type=str, help='Path to output directory')
 parser.add_argument('-t', '--thickness', default='2', type=int, help='Bounding box and cross line thickness')
-# parser.add_argument('--draw-from-PASCAL-files', action='store_true', help='Draw bounding boxes from the PASCAL files') # default YOLO
-'''
-tracker_types = ['CSRT', 'KCF','MOSSE', 'MIL', 'BOOSTING', 'MEDIANFLOW', 'TLD', 'GOTURN', 'DASIAMRPN']
-    Recomended tracker_type:
-        DASIAMRPN -> best
-        KCF -> KCF is usually very good (minimum OpenCV 3.1.0)
-        CSRT -> More accurate than KCF but slightly slower (minimum OpenCV 3.4.2)
-        MOSSE -> Less accurate than KCF but very fast (minimum OpenCV 3.4.1)
-'''
+
 parser.add_argument('--tracker', default='SiamMask', type=str, help="tracker_type being used: ['SiamMask']")
 parser.add_argument('-n', '--n_frames', default='10000000', type=int, help='number of frames to track object for')
 parser.add_argument('--detector', default='../object_detection/crow/epoch=46-step=17342.ckpt', type=str, help='Detector checkpoint dir')
@@ -330,7 +322,7 @@ def draw_bbox_anchors(tmp_img, xmin, ymin, xmax, ymax, color):
         cv2.rectangle(tmp_img, (int(x1), int(y1)), (int(x2), int(y2)), color, -1)
     return tmp_img
 
-def draw_bboxes_from_dict(tmp_img, img_path, width, height):
+def draw_bboxes_from_dict(tmp_img, img_path, width=0, height=0):
     global img_objects, is_bbox_selected, selected_bbox
     img_objects = []
     ann_path = None
@@ -649,6 +641,7 @@ def mouse_listener(event, x, y, flags, param):
 
 
         elif event == cv2.EVENT_LBUTTONDOWN:
+           
             if prev_was_double_click:
                 #print('Finish double click')
                 prev_was_double_click = False
@@ -1110,13 +1103,14 @@ class LabelTracker():
                 ymax = ymin + h
                 obj = [anchor_id,xmin, ymin, xmax, ymax,int(class_index),class_name]
                 frame_data_dict = json_file_add_object(frame_data_dict, frame_path, anchor_id, pred_counter, obj)
-                cv2.rectangle(next_image, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS)
+                cv2.rectangle(next_image, (xmin, ymin), (xmax, ymax), color, LINE_THICKNESS+1)
                 # save prediction
                 annotation_paths = get_annotation_paths(frame_path, annotation_formats)
                 # save_bounding_box(annotation_paths, class_index, (xmin, ymin), (xmax, ymax), self.img_w, self.img_h)
                 update_bounding_box(frame_path,anchor_id,int(class_index),xmin,ymin,xmax,ymax)
 
                 # show prediction
+                next_image = draw_bboxes_from_dict(next_image,frame_path)
                 cv2.imshow(WINDOW_NAME, next_image)
                 pressed_key = cv2.waitKey(DELAY)
                 if pressed_key == ord('x'):
@@ -1488,7 +1482,22 @@ if __name__ == '__main__':
                 save_darklabel_txt(labeling_file_dir)
 
             elif pressed_key == ord(' '):
-                pass
+                current_img_path = IMAGE_PATH_LIST[img_index]
+              
+                is_from_video, video_name = is_frame_from_video(current_img_path)
+                if is_from_video:
+                    # get json file corresponding to that video
+                    json_file_path = '{}.json'.format(os.path.join(TRACKER_DIR, video_name))
+                    file_exists, json_file_data = get_json_file_data(json_file_path)
+                    try:
+                        copyfile(json_file_path, json_file_path[:-5]+'_backup.json')
+                    except Exception:
+                        pass
+                    with open(json_file_path, 'w') as outfile:
+                        # json.dump(json_file_data, outfile, sort_keys=True, indent=4)
+                        json.dump(json_file_data, outfile, sort_keys=True, indent=4)
+                save_darklabel_txt(labeling_file_dir)
+    
             # quit key listener
             elif pressed_key == ord('q'):
                 current_img_path = IMAGE_PATH_LIST[img_index]
@@ -1507,9 +1516,6 @@ if __name__ == '__main__':
                         json.dump(json_file_data, outfile, sort_keys=True, indent=4)
                 save_darklabel_txt(labeling_file_dir)
                 
-                 
-
-
                 break
             ''' Key Listeners END '''
 

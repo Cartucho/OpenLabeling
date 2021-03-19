@@ -1,6 +1,10 @@
 *.pyc
 .idea/
+.vscode/
 venv/
 main/input/
 main/output
 object_detection/models/*
+__pychache__/
+input/
+output/

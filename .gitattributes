@@ -1,2 +1,0 @@
-*.pth filter=lfs diff=lfs merge=lfs -text
-main/pysot/experiments/siamrpn_r50_l234_dwxcorr/model.pth filter=lfs diff=lfs merge=lfs -text

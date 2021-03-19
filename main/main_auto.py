@@ -1,20 +1,3 @@
-'''
-\Description Using object detection and tracker to automatically label data
-\Brief Algorithm
-Step 1. Using Object Detection to find objects in the current frame
-        1.1 If do not detect any object in the frame, then skip this frame and GO BACK TO STEP 1 with next frame
-        1.2  If there is any found object in the frame, then SAVE label to files and GO TO STEP 2
-
-Step 2. Using trackers to track all found objects from Step 1.
-        2.1 If there is not tracker that miss to track object, then SAVE label to files and GO TO STEP 2
-        2.2 If there is any tracker that miss to track object, then GO TO STEP 1
-
-Note:
-    - All the classIds now based on the classIds of Object Detectors. Therefor, it is needed
-    a way to integerate with `class_list.txt`
-'''
-
-
 #!/bin/python
 import argparse
 import json
@@ -24,6 +7,8 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 from shutil import copyfile
+from datetime import datetime
+ 
 
 
 import sys
@@ -915,6 +900,7 @@ display_text('Welcome!\n Press [h] for help.', 4000)
 
 # loop
 new_track = False
+print(datetime.now())
 while True:
     if img_index >= last_index:
         is_last_frame = True
@@ -925,9 +911,13 @@ while True:
         is_last_frame = False
         # set_img_index(0)
         # continue
+        print(datetime.now())
+
         break
     elif is_last_frame:
         print("Reach to the last frame!!!!")
+        print(datetime.now())
+
         break
 
     color = class_rgb[class_index].tolist()

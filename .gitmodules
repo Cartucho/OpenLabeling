@@ -1,7 +1,4 @@
-[submodule "main/DaSiamRPN"]
-	path = main/DaSiamRPN
-	url = https://github.com/fogx/DaSiamRPN_noCUDA
-	
+
 [submodule "object_detection/efficientdet"]
         path = object_detection/efficientdet
         url = https://github.com/signatrix/efficientdet
