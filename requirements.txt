@@ -1,4 +1,4 @@
 lxml==4.3.0
 numpy==1.16.0
-opencv-contrib-python==3.4.9.33
+opencv-contrib-python==4.2.0.32
 tqdm==4.29.1
