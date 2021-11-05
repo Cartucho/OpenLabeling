@@ -78,7 +78,11 @@ Step by step:
 
   1. Open the `main/` directory
   2. Insert the input images and videos in the folder **input/**
-  3. Insert the classes in the file **class_list.txt** (one class name per line)
+  3. Edit config.in setting the full filepath to your class_list (WITHOUT quotation marks). E.g.
+     [CLASSES]
+     MOST_RECENT_FILE = /home/user1/Desktop/class_list.txt
+     
+     Alternatively, just edit the contents of the example file ./main/class_list.txt
   4. Run the code:
   5. You can find the annotations in the folder **output/**
 

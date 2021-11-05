@@ -1,6 +1,5 @@
 #!/bin/python
 import argparse
-import glob
 import json
 import os
 import re
@@ -12,7 +11,10 @@ from tqdm import tqdm
 from lxml import etree
 import xml.etree.cElementTree as ET
 
+from load_classes import get_class_list
 
+
+CLASS_LIST = get_class_list()
 DELAY = 20 # keyboard delay (in milliseconds)
 WITH_QT = False
 try:
@@ -718,13 +720,6 @@ def convert_video_to_images(video_path, n_frames, desired_img_format):
     return file_path, video_name_ext
 
 
-def nonblank_lines(f):
-    for l in f:
-        line = l.rstrip()
-        if line:
-            yield line
-
-
 def get_annotation_paths(img_path, annotation_formats):
     annotation_paths = []
     for ann_dir, ann_ext in annotation_formats.items():
@@ -1032,10 +1027,6 @@ if __name__ == '__main__':
                 elif '.xml' in ann_path:
                     create_PASCAL_VOC_xml(ann_path, abs_path, folder_name, image_name, img_height, img_width, depth)
 
-    # load class list
-    with open('class_list.txt') as f:
-        CLASS_LIST = list(nonblank_lines(f))
-    #print(CLASS_LIST)
     last_class_index = len(CLASS_LIST) - 1
 
     # Make the class colors the same each session
