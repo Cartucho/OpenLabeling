@@ -1,6 +1,5 @@
 #!/bin/python
 import argparse
-import glob
 import json
 import os
 import re
