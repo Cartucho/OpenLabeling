@@ -1,6 +1,1 @@
-*.pyc
-.idea/
-venv/
-main/input/people_walking_mp4
-main/output
-object_detection/models/*
+Nothing should be ignored since the changes only include source code files (.py files) without any build artifacts, dependencies, or temporary files.
